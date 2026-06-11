@@ -17,6 +17,9 @@ import templatesRoutes from "./routes/templates.js";
 import syncRoutes from "./routes/sync.js";
 import appleSyncRoutes from "./routes/appleSync.js";
 import subscriptionsRoutes from "./routes/subscriptions.js";
+import outlookSyncRoutes from "./routes/outlookSync.js";
+import budgetsRoutes from "./routes/budgets.js";
+import aiNotesRoutes from "./routes/aiNotes.js";
 
 const app = new Hono();
 
@@ -43,6 +46,9 @@ app.route("/api/templates", templatesRoutes);
 app.route("/api/sync", syncRoutes);
 app.route("/api/apple-calendar", appleSyncRoutes);
 app.route("/api/subscriptions", subscriptionsRoutes);
+app.route("/api/outlook", outlookSyncRoutes);
+app.route("/api/budgets", budgetsRoutes);
+app.route("/api/ai-notes", aiNotesRoutes);
 
 // 404 handler
 app.notFound((c) => c.json({ error: "Not found" }, 404));

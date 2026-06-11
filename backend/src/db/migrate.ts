@@ -166,6 +166,18 @@ const migrations: string[] = [
     UNIQUE(user_id),
     UNIQUE(stripe_customer_id)
   )`,
+
+  `CREATE TABLE IF NOT EXISTS budgets (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    category TEXT NOT NULL,
+    month TEXT NOT NULL,
+    amount REAL NOT NULL,
+    alert_threshold REAL NOT NULL DEFAULT 80,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+    UNIQUE(user_id, category, month)
+  )`,
 ];
 
 export async function runMigrations() {
@@ -188,6 +200,7 @@ export async function runMigrations() {
     `ALTER TABLE expenses ADD COLUMN recurring_interval TEXT`,
     `ALTER TABLE expenses ADD COLUMN original_date TEXT`,
     `ALTER TABLE calendars ADD COLUMN google_calendar_id TEXT`,
+    `ALTER TABLE expenses ADD COLUMN receipt_url TEXT`,
   ];
 
   for (const sql of alterStatements) {
@@ -212,7 +225,9 @@ export async function runMigrations() {
   await db.execute(`CREATE INDEX IF NOT EXISTS idx_sync_states_user ON sync_states(user_id)`);
   await db.execute(`CREATE INDEX IF NOT EXISTS idx_google_tokens_user ON google_calendar_tokens(user_id)`);
   await db.execute(`CREATE INDEX IF NOT EXISTS idx_apple_tokens_user ON apple_caldav_tokens(user_id)`);
+  await db.execute(`CREATE INDEX IF NOT EXISTS idx_ms_tokens_user ON microsoft_calendar_tokens(user_id)`);
   await db.execute(`CREATE INDEX IF NOT EXISTS idx_stripe_customers_user ON stripe_customers(user_id)`);
+  await db.execute(`CREATE INDEX IF NOT EXISTS idx_budgets_user_month ON budgets(user_id, month)`);
 
   console.log("All indexes created.");
 }

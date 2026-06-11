@@ -1,5 +1,6 @@
 
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { PlannerProvider } from './store/PlannerContext';
 import AppLayout from './layouts/AppLayout';
 import DailyView from './pages/DailyView';
 import WeeklyView from './pages/WeeklyView';
@@ -14,22 +15,24 @@ import PrivateCalendar from './pages/PrivateCalendar';
 
 function App() {
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<AppLayout />}>
-          <Route index element={<DailyView />} />
-          <Route path="weekly" element={<WeeklyView />} />
-          <Route path="monthly" element={<MonthlyView />} />
-          <Route path="tasks" element={<Tasks />} />
-          <Route path="expenses" element={<Expenses />} />
-          <Route path="notes" element={<Notes />} />
-          <Route path="links" element={<Links />} />
-          <Route path="templates" element={<Templates />} />
-          <Route path="private" element={<PrivateCalendar />} />
-          <Route path="settings" element={<Settings />} />
-        </Route>
-      </Routes>
-    </BrowserRouter>
+    <PlannerProvider>
+      <BrowserRouter>
+        <Routes>
+          <Route path="/" element={<AppLayout />}>
+            <Route index element={<DailyView />} />
+            <Route path="weekly" element={<WeeklyView />} />
+            <Route path="monthly" element={<MonthlyView />} />
+            <Route path="tasks" element={<Tasks />} />
+            <Route path="expenses" element={<Expenses />} />
+            <Route path="notes" element={<Notes />} />
+            <Route path="links" element={<Links />} />
+            <Route path="templates" element={<Templates />} />
+            <Route path="private" element={<PrivateCalendar />} />
+            <Route path="settings" element={<Settings />} />
+          </Route>
+        </Routes>
+      </BrowserRouter>
+    </PlannerProvider>
   );
 }
 

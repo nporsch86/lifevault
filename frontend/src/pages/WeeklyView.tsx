@@ -1,52 +1,60 @@
-import { ChevronLeft, ChevronRight, Plus, CheckSquare, Clock, Wallet } from 'lucide-react';
-import { useState } from 'react';
+import { ChevronLeft, ChevronRight, Plus, CheckSquare, Clock, Wallet, FileText, Check, Video } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-
-interface Event {
-  id: string;
-  title: string;
-  category: 'Work' | 'Personal' | 'Family' | 'Health';
-  day: number;
-}
-
-interface DayStats {
-  tasksCount: number;
-  tasksCompleted: number;
-}
+import { useState } from 'react';
+import { usePlanner } from '../store/PlannerContext';
+import AddEventModal from '../components/AddEventModal';
 
 const DAYS = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
-const DATES = [11, 12, 13, 14, 15, 16, 17];
-const CURRENT_DAY_INDEX = 5; // SAT, May 16
 
 const categoryColors: Record<string, string> = {
-  Work: 'bg-blue-500/20 border-blue-500/50 text-blue-200',
-  Personal: 'bg-green-500/20 border-green-500/50 text-green-200',
-  Family: 'bg-orange-500/20 border-orange-500/50 text-orange-200',
-  Health: 'bg-red-500/20 border-red-500/50 text-red-200',
+  Work: 'bg-blue-600/20 border-blue-600/40 text-blue-200',
+  Personal: 'bg-emerald-600/20 border-emerald-600/40 text-emerald-200',
+  Important: 'bg-rose-600/20 border-rose-600/40 text-rose-200',
+  Confidential: 'bg-purple-600/20 border-purple-600/40 text-purple-200',
+  Bill: 'bg-amber-500/20 border-amber-500/40 text-amber-200',
+  Medical: 'bg-teal-600/20 border-teal-600/40 text-teal-200',
+  Family: 'bg-indigo-600/20 border-indigo-600/40 text-indigo-200',
+  Health: 'bg-cyan-600/20 border-cyan-600/40 text-cyan-200',
 };
 
 export default function WeeklyView() {
   const navigate = useNavigate();
-  const [events] = useState<Event[]>([
-    { id: '1', title: 'Team Sync', category: 'Work', day: 0 },
-    { id: '2', title: 'Gym', category: 'Health', day: 0 },
-    { id: '3', title: 'Project Draft', category: 'Work', day: 2 },
-    { id: '4', title: 'Client Call', category: 'Work', day: 3 },
-    { id: '5', title: "Doctor", category: 'Health', day: 4 },
-    { id: '6', title: 'Dinner', category: 'Family', day: 4 },
-    { id: '7', title: 'Groceries', category: 'Family', day: 5 },
-    { id: '8', title: 'Laundry', category: 'Personal', day: 6 },
-  ]);
+  const { events, tasks, togglePaid } = usePlanner();
+  
+  // Mock current week for development: Oct 27 - Nov 02, 2025
+  const todayDateStr = '2025-10-29';
+  const [isEventModalOpen, setIsEventModalOpen] = useState(false);
+  const [selectedDate, setSelectedDate] = useState(todayDateStr);
 
-  const [stats] = useState<Record<number, DayStats>>({
-    0: { tasksCount: 5, tasksCompleted: 3 },
-    1: { tasksCount: 3, tasksCompleted: 3 },
-    2: { tasksCount: 8, tasksCompleted: 2 },
-    3: { tasksCount: 4, tasksCompleted: 1 },
-    4: { tasksCount: 6, tasksCompleted: 0 },
-    5: { tasksCount: 2, tasksCompleted: 0 },
-    6: { tasksCount: 1, tasksCompleted: 0 },
-  });
+  const weekDates = [
+    { label: '27', full: '2025-10-27' },
+    { label: '28', full: '2025-10-28' },
+    { label: '29', full: '2025-10-29' },
+    { label: '30', full: '2025-10-30' },
+    { label: '31', full: '2025-10-31' },
+    { label: '01', full: '2025-11-01' },
+    { label: '02', full: '2025-11-02' },
+  ];
+  
+  const today = new Date(todayDateStr);
+
+  const getDayStats = (dateStr: string) => {
+    const dayTasks = tasks.filter(t => t.date === dateStr);
+    return {
+      count: dayTasks.length,
+      completed: dayTasks.filter(t => t.completed).length
+    };
+  };
+
+  const getBillStatus = (dateStr: string, isPaid: boolean) => {
+    if (isPaid) return 'paid';
+    const dueDate = new Date(dateStr);
+    const diffTime = dueDate.getTime() - today.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    if (diffDays < 0) return 'overdue';
+    if (diffDays <= 3) return 'soon';
+    return 'pending';
+  };
 
   return (
     <div className="flex flex-col h-full space-y-6">
@@ -63,10 +71,10 @@ export default function WeeklyView() {
               </button>
             </div>
             <div>
-              <h2 className="text-2xl font-black text-slate-100 tracking-tight">Week 20, May 11–17, 2026</h2>
+              <h2 className="text-2xl font-black text-slate-100 tracking-tight">Oct 27 – Nov 02, 2025</h2>
             </div>
-            <button className="px-4 py-1.5 text-xs font-black bg-slate-800 text-slate-300 rounded-lg hover:bg-slate-700 transition-colors border border-slate-700">
-              THIS WEEK
+            <button className="px-4 py-1.5 text-xs font-black bg-slate-800 text-slate-300 rounded-lg hover:bg-slate-700 transition-colors border border-slate-700 uppercase tracking-widest">
+              This Week
             </button>
           </div>
           
@@ -83,78 +91,139 @@ export default function WeeklyView() {
 
         {/* Week Stats Header */}
         <div className="flex items-center space-x-6 py-2 px-1 text-sm font-bold text-slate-500 border-b border-slate-800 pb-4">
-          <span className="flex items-center"><CheckSquare className="w-4 h-4 mr-2 text-blue-600/50" /> 29 tasks total</span>
-          <span className="flex items-center"><Clock className="w-4 h-4 mr-2 text-blue-600/50" /> 8 events scheduled</span>
+          <span className="flex items-center"><CheckSquare className="w-4 h-4 mr-2 text-blue-600/50" /> {tasks.length} tasks total</span>
+          <span className="flex items-center"><Clock className="w-4 h-4 mr-2 text-blue-600/50" /> {events.length} events scheduled</span>
           <span className="flex items-center"><Wallet className="w-4 h-4 mr-2 text-blue-600/50" /> $320.00 spent this week</span>
         </div>
       </div>
 
       {/* Weekly Grid */}
       <div className="grid grid-cols-7 gap-4 flex-1 min-h-0 overflow-hidden">
-        {DAYS.map((day, idx) => (
-          <div key={day} className="flex flex-col space-y-4 min-w-0">
-            {/* Day Header */}
-            <div className={`text-center space-y-1 py-3 rounded-2xl transition-colors ${idx === CURRENT_DAY_INDEX ? 'bg-blue-600/10 border border-blue-600/20' : ''}`}>
-              <p className={`text-[10px] font-black tracking-widest ${idx === CURRENT_DAY_INDEX ? 'text-blue-600' : 'text-slate-500'}`}>{day}</p>
-              <p className={`text-2xl font-black ${idx === CURRENT_DAY_INDEX ? 'text-blue-600' : 'text-slate-100'}`}>{DATES[idx]}</p>
-            </div>
-            
-            {/* Day Content */}
-            <div 
-              onClick={() => navigate('/')}
-              className={`flex-1 rounded-3xl p-3 border transition-all cursor-pointer flex flex-col space-y-3 relative group
-                ${idx === CURRENT_DAY_INDEX 
-                  ? 'bg-blue-600/[0.03] border-blue-600/20 hover:border-blue-600/40' 
-                  : 'bg-slate-800/20 border-slate-800/50 hover:border-slate-700'
-                }`}
-            >
-              {/* Events dots/bars */}
-              <div className="space-y-2 flex-1 overflow-y-auto custom-scrollbar pr-1">
-                {events.filter(e => e.day === idx).map(event => (
-                  <div 
-                    key={event.id} 
-                    className={`p-2.5 rounded-xl border ${categoryColors[event.category]} shadow-lg shadow-black/10`}
-                  >
-                    <p className="text-[11px] font-black leading-tight truncate">{event.title}</p>
-                  </div>
-                ))}
-                
-                {events.filter(e => e.day === idx).length === 0 && (
-                  <div className="h-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                    <Plus className="w-6 h-6 text-slate-700" />
-                  </div>
-                )}
-              </div>
+        {DAYS.map((day, idx) => {
+          const dateInfo = weekDates[idx];
+          const isToday = dateInfo.full === todayDateStr;
+          const dayEvents = events.filter(e => e.date === dateInfo.full);
+          const dayStats = getDayStats(dateInfo.full);
 
-              {/* Task stats at bottom */}
-              <div className="pt-3 border-t border-slate-800/50">
-                <div className="flex flex-col space-y-1">
-                  <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-tighter">
-                    <span className={idx === CURRENT_DAY_INDEX ? 'text-blue-600/70' : 'text-slate-500'}>
-                      {stats[idx].tasksCount} Tasks
-                    </span>
-                    <span className="text-slate-600">{Math.round((stats[idx].tasksCompleted / stats[idx].tasksCount) * 100) || 0}%</span>
-                  </div>
-                  <div className="h-1 w-full bg-slate-800 rounded-full overflow-hidden">
-                    <div 
-                      className={`h-full rounded-full ${idx === CURRENT_DAY_INDEX ? 'bg-blue-600 shadow-[0_0_8px_rgba(37,99,235,0.4)]' : 'bg-slate-600'}`}
-                      style={{ width: `${(stats[idx].tasksCompleted / stats[idx].tasksCount) * 100}%` }}
-                    ></div>
-                  </div>
-                  <p className="text-[9px] font-bold text-slate-600 text-right">
-                    {stats[idx].tasksCompleted} done
-                  </p>
+          return (
+            <div key={day} className="flex flex-col space-y-4 min-w-0">
+              {/* Day Header */}
+              <div className={`text-center space-y-1 py-3 rounded-2xl transition-colors ${isToday ? 'bg-blue-600/10 border border-blue-600/20' : ''}`}>
+                <p className={`text-[10px] font-black tracking-widest ${isToday ? 'text-blue-600' : 'text-slate-500'}`}>{day}</p>
+                <p className={`text-2xl font-black ${isToday ? 'text-blue-600' : 'text-slate-100'}`}>{dateInfo.label}</p>
+              </div>
+              
+              {/* Day Content */}
+              <div 
+                className={`flex-1 rounded-[2rem] p-3 border transition-all flex flex-col space-y-3 relative group
+                  ${isToday 
+                    ? 'bg-blue-600/[0.03] border-blue-600/20 hover:border-blue-600/40' 
+                    : 'bg-slate-800/20 border-slate-800/50 hover:border-slate-700'
+                  }`}
+              >
+                {/* Events dots/bars */}
+                <div className="space-y-2 flex-1 overflow-y-auto custom-scrollbar pr-1">
+                  {dayEvents.map(event => {
+                    const isBill = event.category === 'Bill';
+                    const billStatus = isBill ? getBillStatus(event.date, !!event.isPaid) : null;
+                    const billStyle = isBill ? (
+                      billStatus === 'paid' ? 'bg-emerald-600/20 border-emerald-500/50 text-emerald-400' :
+                      billStatus === 'overdue' ? 'bg-rose-600/20 border-rose-500/50 text-rose-200' :
+                      billStatus === 'soon' ? 'bg-amber-500/40 border-amber-500/60 text-amber-50' :
+                      'bg-slate-800/40 border-slate-700/50 text-slate-300'
+                    ) : categoryColors[event.category];
+
+                    return (
+                      <div 
+                        key={event.id} 
+                        className={`p-2.5 rounded-xl border shadow-lg shadow-black/10 relative group/item transition-all ${billStyle}`}
+                      >
+                        <div className="flex items-center justify-between mb-0.5">
+                          <p className="text-[11px] font-black leading-tight truncate mr-1">
+                            {isBill && <FileText className="w-2.5 h-2.5 inline mr-1 mb-0.5" />}
+                            {event.title}
+                          </p>
+                          {isBill && (
+                            <button 
+                              onClick={(e) => { e.stopPropagation(); togglePaid(event.id); }}
+                              className={`w-4 h-4 rounded-md border flex items-center justify-center transition-all ${event.isPaid ? 'bg-emerald-500 border-emerald-400' : 'border-slate-500/50 hover:border-blue-500'}`}
+                            >
+                              {event.isPaid && <Check className="w-3 h-3 text-white" />}
+                            </button>
+                          )}
+                        </div>
+                        {event.meetingLink && (
+                          <a 
+                            href={event.meetingLink} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            onClick={(e) => e.stopPropagation()}
+                            className="mt-1.5 flex items-center space-x-1 bg-white/5 hover:bg-white/10 p-1.5 rounded-lg text-[8px] font-black uppercase tracking-widest transition-all"
+                          >
+                            <Video className="w-2.5 h-2.5 text-blue-400" />
+                            <span>Join</span>
+                          </a>
+                        )}
+                        {isBill && event.amount && (
+                          <div className="flex items-center justify-between mt-1">
+                            <span className="text-[9px] font-black opacity-80">${event.amount}</span>
+                            {!event.isPaid && (
+                               <span className={`text-[7px] font-black uppercase px-1 rounded ${billStatus === 'overdue' ? 'bg-rose-500' : 'bg-slate-700'}`}>
+                                 {billStatus}
+                               </span>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                  
+                  {dayEvents.length === 0 && (
+                    <div className="h-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                      <Plus className="w-6 h-6 text-slate-700" />
+                    </div>
+                  )}
                 </div>
-              </div>
 
-              {/* Hover Plus button */}
-              <button className="absolute top-2 right-2 p-1.5 bg-slate-800 text-slate-400 rounded-lg opacity-0 group-hover:opacity-100 hover:text-blue-600 hover:bg-slate-700 transition-all border border-slate-700">
-                <Plus className="w-3.5 h-3.5" />
-              </button>
+                {/* Task stats at bottom */}
+                <div className="pt-3 border-t border-slate-800/50">
+                  <div className="flex flex-col space-y-1">
+                    <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-tighter">
+                      <span className={isToday ? 'text-blue-600/70' : 'text-slate-500'}>
+                        {dayStats.count} Tasks
+                      </span>
+                      <span className="text-slate-600">{Math.round((dayStats.completed / dayStats.count) * 100) || 0}%</span>
+                    </div>
+                    <div className="h-1 w-full bg-slate-800 rounded-full overflow-hidden">
+                      <div 
+                        className={`h-full rounded-full ${isToday ? 'bg-blue-600 shadow-[0_0_8px_rgba(37,99,235,0.4)]' : 'bg-slate-600'}`}
+                        style={{ width: `${(dayStats.completed / dayStats.count) * 100}%` }}
+                      ></div>
+                    </div>
+                    <p className="text-[9px] font-bold text-slate-600 text-right">
+                      {dayStats.completed} done
+                    </p>
+                  </div>
+                </div>
+
+                {/* Hover Plus button */}
+                <button 
+                  onClick={() => { setSelectedDate(dateInfo.full); setIsEventModalOpen(true); }}
+                  className="absolute top-2 right-2 p-1.5 bg-slate-800 text-slate-400 rounded-lg opacity-0 group-hover:opacity-100 hover:text-blue-600 hover:bg-slate-700 transition-all border border-slate-700"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                </button>
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
+
+      <AddEventModal 
+        isOpen={isEventModalOpen} 
+        onClose={() => setIsEventModalOpen(false)} 
+        initialDate={selectedDate}
+      />
     </div>
   );
 }

@@ -1,12 +1,14 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { 
   Users, MapPin, Link as LinkIcon, 
-  Pencil, Eraser, Type,
+  Pencil, Eraser,
   StickyNote, Share2, 
-  Download, MoreVertical, Plus, 
+  MoreVertical, Plus, 
   Calendar,
-  Undo2, Redo2, Save, Search
+  Undo2, Save, Search,
+  Palette, Highlighter, X, Clock, Sparkles, BrainCircuit, ListChecks, ArrowRight
 } from 'lucide-react';
+import { usePlanner } from '../store/PlannerContext';
 
 interface Point {
   x: number;
@@ -17,6 +19,7 @@ interface Stroke {
   points: Point[];
   color: string;
   width: number;
+  type: 'pencil' | 'highlighter';
 }
 
 interface Sticky {
@@ -28,24 +31,48 @@ interface Sticky {
 }
 
 const COLORS = [
-  { name: 'white', value: '#ffffff' },
-  { name: 'blue', value: '#3b82f6' },
-  { name: 'purple', value: '#a855f7' },
-  { name: 'amber', value: '#f59e0b' },
-  { name: 'green', value: '#10b981' },
+  { name: 'Black', value: '#000000' },
+  { name: 'Dark Gray', value: '#334155' },
+  { name: 'Charcoal', value: '#1e293b' },
+  { name: 'Blue', value: '#3b82f6' },
+  { name: 'Sky Blue', value: '#0ea5e9' },
+  { name: 'Navy', value: '#1e3a8a' },
+  { name: 'Red', value: '#ef4444' },
+  { name: 'Crimson', value: '#991b1b' },
+  { name: 'Orange', value: '#f97316' },
+  { name: 'Green', value: '#22c55e' },
+  { name: 'Teal', value: '#14b8a6' },
+  { name: 'Lime', value: '#84cc16' },
+  { name: 'Purple', value: '#a855f7' },
+  { name: 'Pink', value: '#ec4899' },
 ];
 
-const PEN_WIDTHS = [2, 4, 8];
+const HIGHLIGHTER_COLORS = [
+  { name: 'Yellow', value: '#fde047' },
+  { name: 'Pink', value: '#f472b6' },
+  { name: 'Green', value: '#4ade80' },
+  { name: 'Blue', value: '#60a5fa' },
+  { name: 'Orange', value: '#fb923c' },
+];
+
+const PEN_WIDTHS = [2, 4, 8, 12];
 
 export default function Notes() {
+  const { isPremium, setPremium } = usePlanner();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isDrawing, setIsDrawing] = useState(false);
-  const [currentTool, setCurrentTool] = useState<'pencil' | 'eraser' | 'text' | 'sticky'>('pencil');
+  const [currentTool, setCurrentTool] = useState<'pencil' | 'highlighter' | 'eraser' | 'text' | 'sticky'>('pencil');
   const [currentColor, setCurrentColor] = useState('#3b82f6'); 
   const [currentWidth, setCurrentWidth] = useState(4);
   const [strokes, setStrokes] = useState<Stroke[]>([]);
   const [currentStroke, setCurrentStroke] = useState<Point[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [showPalette, setShowPalette] = useState(false);
+  const [showSummary, setShowSummary] = useState(false);
+  const [showUpsell, setShowUpsell] = useState(false);
+  const [isSummarizing, setIsSummarizing] = useState(false);
+  const [recentColors, setRecentColors] = useState<string[]>(['#3b82f6', '#ef4444', '#22c55e', '#a855f7', '#000000']);
+  
   const [stickies, setStickies] = useState<Sticky[]>([
     { id: '1', x: 400, y: 150, text: 'Goal', color: 'bg-amber-400/90' },
     { id: '2', x: 150, y: 300, text: 'Add tasks', color: 'bg-amber-300/90' },
@@ -71,7 +98,53 @@ export default function Notes() {
     ]
   };
 
-  // Canvas Initialization
+  const redraw = useCallback(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+
+    strokes.forEach(stroke => {
+      ctx.beginPath();
+      if (stroke.type === 'highlighter') {
+        ctx.strokeStyle = stroke.color + '4D'; // ~30% opacity (4D in hex is 77, 77/255 ≈ 0.3)
+        ctx.globalCompositeOperation = 'multiply';
+      } else {
+        ctx.strokeStyle = stroke.color;
+        ctx.globalCompositeOperation = 'source-over';
+      }
+      ctx.lineWidth = stroke.width;
+      stroke.points.forEach((point, i) => {
+        if (i === 0) ctx.moveTo(point.x, point.y);
+        else ctx.lineTo(point.x, point.y);
+      });
+      ctx.stroke();
+    });
+
+    if (currentStroke.length > 0) {
+      ctx.beginPath();
+      const color = currentTool === 'eraser' ? '#1a1a2e' : currentColor;
+      if (currentTool === 'highlighter') {
+        ctx.strokeStyle = color + '4D';
+        ctx.globalCompositeOperation = 'multiply';
+      } else {
+        ctx.strokeStyle = color;
+        ctx.globalCompositeOperation = 'source-over';
+      }
+      ctx.lineWidth = currentWidth;
+      currentStroke.forEach((point, i) => {
+        if (i === 0) ctx.moveTo(point.x, point.y);
+        else ctx.lineTo(point.x, point.y);
+      });
+      ctx.stroke();
+    }
+    ctx.globalCompositeOperation = 'source-over';
+  }, [strokes, currentStroke, currentColor, currentWidth, currentTool]);
+
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -88,40 +161,7 @@ export default function Notes() {
     resizeCanvas();
     window.addEventListener('resize', resizeCanvas);
     return () => window.removeEventListener('resize', resizeCanvas);
-  }, [strokes]);
-
-  const redraw = useCallback(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.lineCap = 'round';
-    ctx.lineJoin = 'round';
-
-    strokes.forEach(stroke => {
-      ctx.beginPath();
-      ctx.strokeStyle = stroke.color;
-      ctx.lineWidth = stroke.width;
-      stroke.points.forEach((point, i) => {
-        if (i === 0) ctx.moveTo(point.x, point.y);
-        else ctx.lineTo(point.x, point.y);
-      });
-      ctx.stroke();
-    });
-
-    if (currentStroke.length > 0) {
-      ctx.beginPath();
-      ctx.strokeStyle = currentTool === 'eraser' ? '#1a1a2e' : currentColor;
-      ctx.lineWidth = currentWidth;
-      currentStroke.forEach((point, i) => {
-        if (i === 0) ctx.moveTo(point.x, point.y);
-        else ctx.lineTo(point.x, point.y);
-      });
-      ctx.stroke();
-    }
-  }, [strokes, currentStroke, currentColor, currentWidth, currentTool]);
+  }, [strokes, redraw]);
 
   useEffect(() => {
     redraw();
@@ -134,11 +174,11 @@ export default function Notes() {
     
     let clientX, clientY;
     if ('touches' in e) {
-      clientX = e.touches[0].clientX;
-      clientY = e.touches[0].clientY;
+      clientX = (e as React.TouchEvent).touches[0].clientX;
+      clientY = (e as React.TouchEvent).touches[0].clientY;
     } else {
-      clientX = (e as MouseEvent).clientX;
-      clientY = (e as MouseEvent).clientY;
+      clientX = (e as React.MouseEvent).clientX;
+      clientY = (e as React.MouseEvent).clientY;
     }
 
     return {
@@ -148,10 +188,15 @@ export default function Notes() {
   };
 
   const startDrawing = (e: React.MouseEvent | React.TouchEvent) => {
-    if (currentTool === 'pencil' || currentTool === 'eraser') {
+    if (currentTool === 'pencil' || currentTool === 'eraser' || currentTool === 'highlighter') {
       setIsDrawing(true);
       const point = getPoint(e);
       setCurrentStroke([point]);
+      
+      // Update recent colors if pencil or highlighter
+      if (currentTool !== 'eraser' && !recentColors.includes(currentColor)) {
+        setRecentColors(prev => [currentColor, ...prev.slice(0, 4)]);
+      }
     } else if (currentTool === 'sticky') {
       const point = getPoint(e);
       const newSticky: Sticky = {
@@ -179,10 +224,24 @@ export default function Notes() {
       setStrokes(prev => [...prev, {
         points: currentStroke,
         color: currentTool === 'eraser' ? '#1a1a2e' : currentColor,
-        width: currentWidth
+        width: currentWidth,
+        type: currentTool === 'highlighter' ? 'highlighter' : 'pencil'
       }]);
     }
     setCurrentStroke([]);
+  };
+
+  const handleSummarize = () => {
+    if (!isPremium) {
+      setShowUpsell(true);
+      return;
+    }
+    setIsSummarizing(true);
+    // Simulate AI processing
+    setTimeout(() => {
+      setIsSummarizing(false);
+      setShowSummary(true);
+    }, 1500);
   };
 
   const clearCanvas = () => {
@@ -249,6 +308,18 @@ export default function Notes() {
             </div>
           </div>
           <div className="flex items-center space-x-3">
+            <button 
+              onClick={handleSummarize}
+              disabled={isSummarizing}
+              className={`flex items-center space-x-2 px-4 py-2 rounded-xl transition-all font-bold text-sm shadow-lg ${isSummarizing ? 'bg-slate-700 text-slate-400' : 'bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white shadow-purple-500/20'}`}
+            >
+              {isSummarizing ? (
+                <div className="w-4 h-4 border-2 border-slate-400 border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <Sparkles className="w-4 h-4" />
+              )}
+              <span>AI Summarize</span>
+            </button>
             <button className="flex items-center space-x-2 bg-slate-800 hover:bg-slate-700 text-slate-300 px-4 py-2 rounded-xl transition-all border border-slate-700 font-bold text-sm">
               <Share2 className="w-4 h-4" />
               <span>Share</span>
@@ -361,69 +432,148 @@ export default function Notes() {
             </div>
           ))}
 
+          {/* Color Palette Overlay */}
+          {showPalette && (
+            <div className="absolute bottom-24 left-1/2 -translate-x-1/2 bg-slate-800/95 backdrop-blur-2xl border border-slate-700/50 rounded-[2rem] p-8 shadow-2xl z-40 w-[400px] animate-in zoom-in slide-in-from-bottom-4 duration-200">
+               <div className="space-y-6">
+                 <div>
+                   <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-4">Pen Palette</h4>
+                   <div className="grid grid-cols-7 gap-3">
+                     {COLORS.map(c => (
+                      <button 
+                        key={c.name}
+                        onClick={() => {
+                          setCurrentColor(c.value);
+                          if (currentTool === 'highlighter' || currentTool === 'eraser') setCurrentTool('pencil');
+                        }}
+                        title={c.name}
+                        className={`w-8 h-8 rounded-xl border-2 transition-all hover:scale-110 ${currentColor === c.value && currentTool !== 'highlighter' ? 'border-white ring-2 ring-white/20' : 'border-white/5'}`}
+                        style={{ backgroundColor: c.value }}
+                      />
+                    ))}
+                   </div>
+                 </div>
+
+                 <div>
+                   <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-4">Highlighter Palette</h4>
+                   <div className="flex space-x-4">
+                     {HIGHLIGHTER_COLORS.map(c => (
+                      <button 
+                        key={c.name}
+                        onClick={() => {
+                          setCurrentColor(c.value);
+                          setCurrentTool('highlighter');
+                        }}
+                        title={`${c.name} Highlighter`}
+                        className={`w-10 h-10 rounded-2xl border-2 transition-all hover:scale-110 ${currentColor === c.value && currentTool === 'highlighter' ? 'border-white ring-2 ring-white/20' : 'border-white/5'}`}
+                        style={{ backgroundColor: c.value }}
+                      />
+                    ))}
+                   </div>
+                 </div>
+
+                 <div className="flex items-center justify-between pt-4 border-t border-slate-700/50">
+                   <div className="flex items-center space-x-2">
+                    <Palette className="w-4 h-4 text-slate-500" />
+                    <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest">Custom</span>
+                   </div>
+                   <input 
+                    type="color" 
+                    value={currentColor} 
+                    onChange={(e) => setCurrentColor(e.target.value)}
+                    className="w-12 h-8 bg-transparent border-none cursor-pointer rounded-lg overflow-hidden"
+                   />
+                 </div>
+               </div>
+            </div>
+          )}
+
           {/* Toolbar */}
-          <div className="absolute bottom-8 left-1/2 -translate-x-1/2 bg-slate-800/90 backdrop-blur-xl border border-slate-700/50 rounded-2xl p-2 flex items-center space-x-1 shadow-2xl z-30">
-            <div className="flex items-center border-r border-slate-700 pr-2 mr-1">
+          <div className="absolute bottom-8 left-1/2 -translate-x-1/2 bg-slate-800/90 backdrop-blur-xl border border-slate-700/50 rounded-[2rem] px-6 py-3 flex items-center space-x-6 shadow-2xl z-30">
+            {/* Pen Section */}
+            <div className="flex items-center space-x-2 pr-6 border-r border-slate-700/50">
               <button 
                 onClick={() => setCurrentTool('pencil')}
-                className={`p-3 rounded-xl transition-all ${currentTool === 'pencil' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:bg-slate-700 hover:text-slate-200'}`}
+                className={`p-3 rounded-2xl transition-all ${currentTool === 'pencil' ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20' : 'text-slate-400 hover:bg-slate-700 hover:text-slate-200'}`}
+                title="Pen"
               >
                 <Pencil className="w-5 h-5" />
               </button>
+              
+              <div className="flex items-center -space-x-1 ml-2">
+                {recentColors.map((color, i) => (
+                  <button
+                    key={i}
+                    onClick={() => {
+                      setCurrentColor(color);
+                      if (currentTool === 'highlighter' || currentTool === 'eraser') setCurrentTool('pencil');
+                    }}
+                    className={`w-6 h-6 rounded-full border-2 border-slate-800 z-${10-i} hover:scale-110 transition-transform`}
+                    style={{ backgroundColor: color }}
+                    title="Recent Color"
+                  />
+                ))}
+                <button 
+                  onClick={() => setShowPalette(!showPalette)}
+                  className="w-6 h-6 rounded-full bg-slate-700 border-2 border-slate-800 flex items-center justify-center text-slate-400 hover:text-white transition-colors"
+                  title="More Colors"
+                >
+                  <Plus className="w-3 h-3" />
+                </button>
+              </div>
+            </div>
+
+            {/* Highlighter Section */}
+            <div className="flex items-center space-x-2 pr-6 border-r border-slate-700/50">
+              <button 
+                onClick={() => setCurrentTool('highlighter')}
+                className={`p-3 rounded-2xl transition-all ${currentTool === 'highlighter' ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20' : 'text-slate-400 hover:bg-slate-700 hover:text-slate-200'}`}
+                title="Highlighter"
+              >
+                <Highlighter className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Sizes Slider */}
+            <div className="flex items-center space-x-4 pr-6 border-r border-slate-700/50">
+              <div className="flex items-center space-x-2">
+                {PEN_WIDTHS.map(w => (
+                  <button 
+                    key={w}
+                    onClick={() => setCurrentWidth(w)}
+                    className={`rounded-full transition-all flex items-center justify-center ${currentWidth === w ? 'bg-slate-700 text-white' : 'text-slate-500 hover:text-slate-300'}`}
+                    style={{ width: 28, height: 28 }}
+                    title={`Size ${w}px`}
+                  >
+                    <div className="bg-current rounded-full" style={{ width: w/1.5, height: w/1.5 }} />
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Eraser & Actions */}
+            <div className="flex items-center space-x-2">
               <button 
                 onClick={() => setCurrentTool('eraser')}
-                className={`p-3 rounded-xl transition-all ${currentTool === 'eraser' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:bg-slate-700 hover:text-slate-200'}`}
+                className={`p-3 rounded-2xl transition-all ${currentTool === 'eraser' ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20' : 'text-slate-400 hover:bg-slate-700 hover:text-slate-200'}`}
+                title="Eraser"
               >
                 <Eraser className="w-5 h-5" />
               </button>
               <button 
-                onClick={() => setCurrentTool('text')}
-                className={`p-3 rounded-xl transition-all ${currentTool === 'text' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:bg-slate-700 hover:text-slate-200'}`}
-              >
-                <Type className="w-5 h-5" />
-              </button>
-              <button 
                 onClick={() => setCurrentTool('sticky')}
-                className={`p-3 rounded-xl transition-all ${currentTool === 'sticky' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:bg-slate-700 hover:text-slate-200'}`}
+                className={`p-3 rounded-2xl transition-all ${currentTool === 'sticky' ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20' : 'text-slate-400 hover:bg-slate-700 hover:text-slate-200'}`}
+                title="Sticky Note"
               >
                 <StickyNote className="w-5 h-5" />
               </button>
-            </div>
-
-            <div className="flex items-center space-x-2 px-3 border-r border-slate-700 pr-4 mr-1">
-              {COLORS.map(c => (
-                <button 
-                  key={c.name}
-                  onClick={() => setCurrentColor(c.value)}
-                  className={`w-6 h-6 rounded-full border-2 transition-all ${currentColor === c.value ? 'border-white scale-110 shadow-lg shadow-white/20' : 'border-transparent hover:scale-105'}`}
-                  style={{ backgroundColor: c.value }}
-                />
-              ))}
-            </div>
-
-            <div className="flex items-center space-x-2 px-3 border-r border-slate-700 pr-4 mr-1">
-              {PEN_WIDTHS.map(w => (
-                <button 
-                  key={w}
-                  onClick={() => setCurrentWidth(w)}
-                  className={`rounded-full transition-all flex items-center justify-center ${currentWidth === w ? 'bg-slate-700 text-white' : 'text-slate-500 hover:text-slate-300'}`}
-                  style={{ width: 32, height: 32 }}
-                >
-                  <div className="bg-current rounded-full" style={{ width: w, height: w }} />
-                </button>
-              ))}
-            </div>
-
-            <div className="flex items-center pl-2">
+              <div className="w-px h-8 bg-slate-700/50 mx-2" />
               <button 
                 onClick={clearCanvas}
-                className="p-3 rounded-xl text-slate-400 hover:bg-red-500/10 hover:text-red-400 transition-all"
+                className="p-3 rounded-2xl text-slate-400 hover:bg-red-500/10 hover:text-red-400 transition-all"
+                title="Clear All"
               >
-                <Download className="w-5 h-5" />
-              </button>
-              <div className="w-px h-8 bg-slate-700 mx-2" />
-              <button className="bg-slate-700 hover:bg-slate-600 text-slate-200 px-4 py-2 rounded-xl transition-all font-bold text-xs uppercase tracking-widest">
-                Link to Event
+                <X className="w-5 h-5" />
               </button>
             </div>
           </div>
@@ -433,15 +583,151 @@ export default function Notes() {
             <button 
               className="bg-slate-800/80 backdrop-blur-md border border-slate-700/50 p-2.5 rounded-xl text-slate-400 hover:text-slate-200 transition-all"
               onClick={() => setStrokes(strokes.slice(0, -1))}
+              title="Undo"
             >
               <Undo2 className="w-5 h-5" />
             </button>
-            <button className="bg-slate-800/80 backdrop-blur-md border border-slate-700/50 p-2.5 rounded-xl text-slate-400 hover:text-slate-200 transition-all opacity-50 cursor-not-allowed">
-              <Redo2 className="w-5 h-5" />
-            </button>
+            <div className="flex items-center bg-slate-800/80 backdrop-blur-md border border-slate-700/50 rounded-xl px-3 py-2 space-x-2 ml-2">
+              <Clock className="w-4 h-4 text-slate-500" />
+              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Auto-saved</span>
+            </div>
           </div>
         </div>
       </div>
+
+      {/* AI Summary Sidebar Panel */}
+      {showSummary && (
+        <div className="w-96 flex flex-col space-y-6 animate-in slide-in-from-right duration-300 border-l border-slate-800 pl-8 h-full overflow-hidden">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2 text-purple-400">
+              <BrainCircuit className="w-5 h-5" />
+              <h3 className="font-black text-lg uppercase tracking-widest">AI Insights</h3>
+            </div>
+            <button onClick={() => setShowSummary(false)} className="text-slate-500 hover:text-white transition-colors">
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+
+          <div className="flex-1 overflow-y-auto pr-2 space-y-8 custom-scrollbar">
+            {/* Summary Section */}
+            <div className="space-y-4">
+              <div className="flex items-center space-x-2">
+                <div className="w-1 h-4 bg-purple-500 rounded-full" />
+                <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Summary</h4>
+              </div>
+              <div className="bg-slate-800/40 rounded-2xl p-5 border border-slate-700/30">
+                <p className="text-sm text-slate-300 leading-relaxed font-medium">
+                  The team discussed the upcoming v2.1 shipping schedule. Focus remains on the premium feature rollout and the private vault biometric integration. Alex will handle the final design review.
+                </p>
+              </div>
+            </div>
+
+            {/* Action Items */}
+            <div className="space-y-4">
+              <div className="flex items-center space-x-2">
+                <div className="w-1 h-4 bg-blue-500 rounded-full" />
+                <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Action Items</h4>
+              </div>
+              <div className="space-y-3">
+                {[
+                  'Finalize v2.1 feature list by Friday',
+                  'Schedule design review with Alex',
+                  'Test biometric lock on tablet hardware'
+                ].map((item, i) => (
+                  <div key={i} className="flex items-start space-x-3 bg-slate-800/40 p-4 rounded-2xl border border-slate-700/30 group hover:border-blue-500/30 transition-all">
+                    <div className="mt-0.5">
+                      <ListChecks className="w-4 h-4 text-blue-500" />
+                    </div>
+                    <p className="text-xs font-bold text-slate-200">{item}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Key Points */}
+            <div className="space-y-4 pb-10">
+              <div className="flex items-center space-x-2">
+                <div className="w-1 h-4 bg-emerald-500 rounded-full" />
+                <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Key Points</h4>
+              </div>
+              <ul className="space-y-3 px-4">
+                <li className="text-xs font-medium text-slate-400 list-disc marker:text-emerald-500">Positive feedback on the blue theme from beta testers.</li>
+                <li className="text-xs font-medium text-slate-400 list-disc marker:text-emerald-500">Concerns about offline sync latency.</li>
+                <li className="text-xs font-medium text-slate-400 list-disc marker:text-emerald-500">Next sync scheduled for next Monday.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div className="pt-6 border-t border-slate-800">
+            <button 
+              className="w-full bg-slate-800 hover:bg-slate-700 text-slate-200 py-3.5 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all flex items-center justify-center space-x-2"
+              onClick={() => {
+                // Mock adding to tasks
+                alert('Action items added to your task list!');
+              }}
+            >
+              <Plus className="w-4 h-4" />
+              <span>Import Actions to Tasks</span>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* AI Premium Upsell Modal */}
+      {showUpsell && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-300">
+          <div className="bg-[#1a1a2e] w-full max-w-lg rounded-[2.5rem] border border-slate-800 p-10 shadow-2xl relative overflow-hidden text-center">
+            {/* Background Glow */}
+            <div className="absolute -top-24 -left-24 w-64 h-64 bg-purple-600/20 blur-[80px] rounded-full" />
+            <div className="absolute -bottom-24 -right-24 w-64 h-64 bg-blue-600/20 blur-[80px] rounded-full" />
+
+            <button 
+              onClick={() => setShowUpsell(false)}
+              className="absolute top-6 right-6 p-2 text-slate-500 hover:text-white transition-colors"
+            >
+              <X className="w-6 h-6" />
+            </button>
+
+            <div className="inline-flex p-4 bg-gradient-to-br from-purple-500/20 to-blue-500/20 rounded-[2rem] mb-8 ring-1 ring-white/10">
+              <Sparkles className="w-12 h-12 text-purple-400" />
+            </div>
+
+            <h3 className="text-3xl font-black text-white tracking-tight mb-4">Unlock AI Intelligence</h3>
+            <p className="text-slate-400 font-medium leading-relaxed mb-10 max-w-sm mx-auto">
+              Get instant meeting summaries, automated action items, and smart insights with Lifevault Premium.
+            </p>
+
+            <div className="space-y-4 mb-10 text-left">
+              {[
+                'Smart meeting summaries',
+                'One-click action items import',
+                'Topic detection and key points',
+                'Advanced search through drawings'
+              ].map((feature, i) => (
+                <div key={i} className="flex items-center space-x-3">
+                  <div className="w-5 h-5 rounded-full bg-emerald-500/20 flex items-center justify-center">
+                    <ArrowRight className="w-3 h-3 text-emerald-500" />
+                  </div>
+                  <span className="text-sm font-bold text-slate-300">{feature}</span>
+                </div>
+              ))}
+            </div>
+
+            <button 
+              onClick={() => {
+                setPremium(true);
+                setShowUpsell(false);
+                handleSummarize();
+              }}
+              className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white py-5 rounded-2xl font-black shadow-xl shadow-purple-500/20 transition-all uppercase tracking-[0.2em] text-xs flex items-center justify-center space-x-2 group"
+            >
+              <span>Upgrade to Premium</span>
+              <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+            </button>
+            <p className="mt-6 text-[10px] font-black text-slate-500 uppercase tracking-widest">Starting at $7.99 / month</p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

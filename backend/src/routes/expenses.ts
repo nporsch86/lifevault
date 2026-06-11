@@ -3,9 +3,14 @@ import { z } from "zod";
 import { authMiddleware, getUser } from "../middleware/auth.js";
 import db from "../db/client.js";
 import { recordSync } from "../services/sync.js";
+import { readFileSync, existsSync, mkdirSync } from "fs";
+import { writeFile } from "fs/promises";
+import { join, extname } from "path";
 
 const expenses = new Hono();
 expenses.use("*", authMiddleware);
+
+const UPLOAD_DIR = join(process.cwd(), "uploads", "receipts");
 
 const createExpenseSchema = z.object({
   amount: z.number().positive(),
@@ -17,6 +22,15 @@ const createExpenseSchema = z.object({
 });
 
 const updateExpenseSchema = createExpenseSchema.partial();
+
+// Allowed image MIME types
+const ALLOWED_MIME_TYPES = ["image/jpeg", "image/png", "image/gif", "image/webp", "image/heic"];
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+
+// Ensure upload dir exists
+if (!existsSync(UPLOAD_DIR)) {
+  mkdirSync(UPLOAD_DIR, { recursive: true });
+}
 
 expenses.get("/", async (c) => {
   const user = getUser(c);
@@ -117,7 +131,156 @@ expenses.delete("/:id", async (c) => {
   return c.json({ message: "Expense deleted" });
 });
 
+// --- Receipt Upload ---
+
+// Upload a receipt image for an expense
+expenses.post("/:id/receipt", async (c) => {
+  const user = getUser(c);
+  const { id } = c.req.param();
+
+  // Verify expense exists and belongs to user
+  const expense = await db.execute({
+    sql: `SELECT id, receipt_url FROM expenses WHERE id = ? AND user_id = ?`,
+    args: [id, user.userId],
+  });
+  if (!expense.rows[0]) return c.json({ error: "Expense not found" }, 404);
+
+  try {
+    const contentType = c.req.header("Content-Type") || "";
+
+    let filename: string;
+    let fileBuffer: Buffer;
+
+    if (contentType.includes("multipart/form-data")) {
+      // Parse multipart form data
+      const formData = await c.req.parseBody();
+      const file = formData["file"] as File | undefined;
+
+      if (!file) return c.json({ error: "No file provided (field name: 'file')" }, 400);
+
+      // Validate file type
+      if (!ALLOWED_MIME_TYPES.includes(file.type)) {
+        return c.json({ error: `Invalid file type: ${file.type}. Allowed: ${ALLOWED_MIME_TYPES.join(", ")}` }, 400);
+      }
+
+      // Validate file size
+      if (file.size > MAX_FILE_SIZE) {
+        return c.json({ error: `File too large. Max size: ${MAX_FILE_SIZE / 1024 / 1024}MB` }, 400);
+      }
+
+      const ext = extname(file.name) || ".jpg";
+      filename = `${id}${ext}`;
+      fileBuffer = Buffer.from(await file.arrayBuffer());
+    } else {
+      // Direct binary upload (Content-Type: image/*)
+      const rawBody = await c.req.arrayBuffer();
+      fileBuffer = Buffer.from(rawBody);
+      const extFromContentType = contentType.split("/")[1] || "jpg";
+      filename = `${id}.${extFromContentType}`;
+
+      if (fileBuffer.length > MAX_FILE_SIZE) {
+        return c.json({ error: `File too large. Max size: ${MAX_FILE_SIZE / 1024 / 1024}MB` }, 400);
+      }
+    }
+
+    // Save file to disk
+    const filePath = join(UPLOAD_DIR, filename);
+    await writeFile(filePath, fileBuffer);
+
+    // Generate URL for the receipt
+    const receiptUrl = `/uploads/receipts/${filename}`;
+
+    // Update the expense with receipt_url
+    await db.execute({
+      sql: `UPDATE expenses SET receipt_url = ? WHERE id = ? AND user_id = ?`,
+      args: [receiptUrl, id, user.userId],
+    });
+
+    return c.json({
+      message: "Receipt uploaded",
+      receiptUrl,
+    });
+  } catch (err) {
+    console.error("Receipt upload error:", err);
+    return c.json({ error: "Failed to upload receipt" }, 500);
+  }
+});
+
+// Get receipt URL for an expense
+expenses.get("/:id/receipt", async (c) => {
+  const user = getUser(c);
+  const { id } = c.req.param();
+  const result = await db.execute({
+    sql: `SELECT receipt_url FROM expenses WHERE id = ? AND user_id = ?`,
+    args: [id, user.userId],
+  });
+  if (!result.rows[0]) return c.json({ error: "Expense not found" }, 404);
+  const receiptUrl = (result.rows[0] as any).receipt_url;
+  if (!receiptUrl) return c.json({ error: "No receipt attached" }, 404);
+  return c.json({ receiptUrl });
+});
+
+// Delete receipt for an expense
+expenses.delete("/:id/receipt", async (c) => {
+  const user = getUser(c);
+  const { id } = c.req.param();
+  const expense = await db.execute({
+    sql: `SELECT receipt_url FROM expenses WHERE id = ? AND user_id = ?`,
+    args: [id, user.userId],
+  });
+  if (!expense.rows[0]) return c.json({ error: "Expense not found" }, 404);
+
+  const receiptUrl = (expense.rows[0] as any).receipt_url;
+  if (receiptUrl) {
+    const filePath = join(UPLOAD_DIR, receiptUrl.split("/").pop() || "");
+    try {
+      const { unlink } = await import("fs/promises");
+      await unlink(filePath);
+    } catch { /* file may not exist */ }
+  }
+
+  await db.execute({
+    sql: `UPDATE expenses SET receipt_url = NULL WHERE id = ? AND user_id = ?`,
+    args: [user.userId, id],
+  });
+
+  return c.json({ message: "Receipt deleted" });
+});
+
+// Serve receipt files
+expenses.get("/file/:filename", async (c) => {
+  const { filename } = c.req.param();
+  const filePath = join(UPLOAD_DIR, filename);
+
+  // Security: prevent directory traversal
+  if (filename.includes("..") || filename.includes("/")) {
+    return c.json({ error: "Invalid filename" }, 400);
+  }
+
+  if (!existsSync(filePath)) {
+    return c.json({ error: "File not found" }, 404);
+  }
+
+  const fileBuffer = readFileSync(filePath);
+  const ext = extname(filename).toLowerCase();
+  const mimeMap: Record<string, string> = {
+    ".jpg": "image/jpeg",
+    ".jpeg": "image/jpeg",
+    ".png": "image/png",
+    ".gif": "image/gif",
+    ".webp": "image/webp",
+    ".heic": "image/heic",
+  };
+
+  return c.newResponse(fileBuffer, 200, {
+    "Content-Type": mimeMap[ext] || "application/octet-stream",
+    "Content-Disposition": `inline; filename="${filename}"`,
+    "Cache-Control": "public, max-age=31536000",
+  });
+});
+
 // --- Statistics ---
+
 expenses.get("/stats/summary", async (c) => {
   const user = getUser(c);
   const from = c.req.query("from");
@@ -148,11 +311,11 @@ expenses.get("/stats/by-category", async (c) => {
 });
 
 // --- Recurring expense generation ---
+
 expenses.post("/generate-recurring", async (c) => {
   const user = getUser(c);
   const today = new Date().toISOString().split("T")[0];
 
-  // Find all recurring expenses that need generation
   const result = await db.execute({
     sql: `SELECT * FROM expenses WHERE user_id = ? AND is_recurring = 1`,
     args: [user.userId],
@@ -162,11 +325,9 @@ expenses.post("/generate-recurring", async (c) => {
 
   for (const row of result.rows) {
     const expense = row as any;
-    const originalDate = new Date(expense.original_date || expense.date);
     const lastDate = new Date(expense.date);
     const now = new Date();
 
-    // Determine if a new instance should be generated
     let shouldGenerate = false;
     let nextDate: Date | null = null;
 
@@ -202,14 +363,12 @@ expenses.post("/generate-recurring", async (c) => {
         ],
       });
 
-      // Track generation
       await db.execute({
         sql: `INSERT INTO expense_generations (id, expense_id, generated_from_date, generated_to_date)
               VALUES (?, ?, ?, ?)`,
         args: [crypto.randomUUID(), expense.id, expense.date, dateStr],
       });
 
-      // Update original to point to new date
       await db.execute({
         sql: `UPDATE expenses SET date = ? WHERE id = ?`,
         args: [dateStr, expense.id],
