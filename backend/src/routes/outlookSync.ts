@@ -258,7 +258,7 @@ outlookSync.post("/push-event/:eventId", async (c) => {
     if (!newMsEventId) return c.json({ error: "Failed to create event in Outlook" }, 502);
   }
 
-  await markEventSynced(eventId, newMsEventId);
+  await markEventSynced(eventId, newMsEventId!);
   await recordSync(user.userId, "event", eventId, newMsEventId, "local_to_remote");
 
   return c.json({ message: "Event synced to Outlook", outlookEventId: newMsEventId });

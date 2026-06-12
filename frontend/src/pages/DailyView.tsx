@@ -1,8 +1,10 @@
-import { Plus, MoreVertical, CheckCircle2, Circle, Clock, CheckSquare, Wallet, FileText, Check, DollarSign, AlertCircle, Video } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { Plus, MoreVertical, CheckCircle2, Circle, Clock, CheckSquare, Wallet, FileText, Check, DollarSign, AlertCircle, Video, Car } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
 import { usePlanner } from '../store/PlannerContext';
 import type { PlannerTask } from '../store/PlannerContext';
 import AddEventModal from '../components/AddEventModal';
+import VoiceInput from '../components/VoiceInput';
+import { parseVoiceCommand } from '../utils/voiceParser';
 
 const HOURS = Array.from({ length: 24 }, (_, i) => {
   const hour = i;
@@ -23,8 +25,30 @@ const categoryColors: Record<string, string> = {
 };
 
 export default function DailyView() {
-  const { events, tasks, budgets, toggleTask, addTask, togglePaid } = usePlanner();
+  const { events, tasks, budgets, toggleTask, addTask, togglePaid, addEvent, updateEvent } = usePlanner();
   const [currentTime, setCurrentTime] = useState(new Date());
+
+  const handleVoiceCommand = (text: string) => {
+    const parsed = parseVoiceCommand(text);
+    
+    if (parsed.action === 'add' && parsed.title && parsed.date) {
+      addEvent({
+        id: Math.random().toString(36).substr(2, 9),
+        title: parsed.title,
+        date: parsed.date,
+        startTime: parsed.time || '09:00',
+        category: 'Work',
+      });
+      // Optional: show a toast or feedback
+      console.log(`Added event: ${parsed.title} on ${parsed.date} at ${parsed.time}`);
+    } else if (parsed.action === 'move' && parsed.title && parsed.date) {
+      const eventToMove = events.find(e => e.title.toLowerCase().includes(parsed.title!.toLowerCase()));
+      if (eventToMove) {
+        updateEvent(eventToMove.id, { date: parsed.date });
+        console.log(`Moved event: ${eventToMove.title} to ${parsed.date}`);
+      }
+    }
+  };
 
   // Mock spending data for alerts (in a real app, this would come from a global state or API)
   const mockSpending: Record<string, number> = {
@@ -121,6 +145,7 @@ export default function DailyView() {
           </div>
         </div>
         <div className="flex items-center space-x-4">
+          <VoiceInput onCommand={handleVoiceCommand} />
           <div className="flex bg-slate-800 p-1 rounded-xl">
              <button className="px-4 py-1.5 text-sm font-bold bg-slate-700 text-blue-600 rounded-lg shadow-sm">DAY</button>
              <button className="px-4 py-1.5 text-sm font-bold text-slate-400 hover:text-slate-200 rounded-lg transition-all">WEEK</button>
@@ -172,6 +197,7 @@ export default function DailyView() {
                       .map(event => {
                         const startMin = event.startTime ? parseInt(event.startTime.split(':')[1]) : 0;
                         const duration = 60;
+                        const travelTime = event.travelTime || 0;
                         const isBill = event.category === 'Bill';
                         const billStatus = isBill ? getBillStatus(event.date, !!event.isPaid) : null;
                         const billStyle = isBill ? (
@@ -181,15 +207,30 @@ export default function DailyView() {
                         ) : categoryColors[event.category];
 
                         return (
-                          <div 
-                            key={event.id}
-                            className={`absolute left-2 right-6 rounded-2xl border ${billStyle} p-4 shadow-xl shadow-black/20 z-20 cursor-pointer hover:scale-[1.01] transition-all flex justify-between items-start`}
-                            style={{ 
-                              top: `${(startMin / 60) * 100}%`, 
-                              height: `${(duration / 60) * 64 - 4}px`,
-                              minHeight: '60px'
-                            }}
-                          >
+                          <React.Fragment key={event.id}>
+                            {travelTime > 0 && (
+                              <div 
+                                className="absolute left-4 right-10 rounded-xl border border-dashed border-slate-600 bg-slate-800/40 flex items-center px-4 z-10"
+                                style={{ 
+                                  top: `${((startMin - travelTime) / 60) * 100}%`, 
+                                  height: `${(travelTime / 60) * 64 - 2}px`,
+                                  minHeight: '20px'
+                                }}
+                              >
+                                <div className="flex items-center space-x-2 text-[8px] font-black text-slate-500 uppercase tracking-widest">
+                                  <Car className="w-3 h-3" />
+                                  <span>{travelTime}m Travel Time</span>
+                                </div>
+                              </div>
+                            )}
+                            <div 
+                              className={`absolute left-2 right-6 rounded-2xl border ${billStyle} p-4 shadow-xl shadow-black/20 z-20 cursor-pointer hover:scale-[1.01] transition-all flex justify-between items-start`}
+                              style={{ 
+                                top: `${(startMin / 60) * 100}%`, 
+                                height: `${(duration / 60) * 64 - 4}px`,
+                                minHeight: '60px'
+                              }}
+                            >
                             <div className="min-w-0">
                               <p className="font-black text-sm truncate leading-tight flex items-center">
                                 {isBill && <FileText className="w-4 h-4 mr-2 shrink-0" />}
@@ -220,6 +261,7 @@ export default function DailyView() {
                               </button>
                             )}
                           </div>
+                        </React.Fragment>
                         );
                       })
                     }

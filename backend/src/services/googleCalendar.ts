@@ -118,7 +118,7 @@ export async function pushEventToGoogle(
   const accessToken = await getValidAccessToken(userId);
   if (!accessToken) return null;
 
-  const googleEvent: GoogleCalendarEvent = {
+  const googleEvent: Partial<GoogleCalendarEvent> = {
     summary: event.title,
     description: event.description || "",
   };

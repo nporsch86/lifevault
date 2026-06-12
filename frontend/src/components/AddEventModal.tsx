@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Calendar, Clock, Tag, Link as LinkIcon, Video, ArrowRight } from 'lucide-react';
+import { X, Calendar, Clock, Tag, Link as LinkIcon, Video, ArrowRight, Car } from 'lucide-react';
 import { usePlanner } from '../store/PlannerContext';
 import type { PlannerEvent } from '../store/PlannerContext';
 
@@ -19,6 +19,7 @@ export default function AddEventModal({ isOpen, onClose, initialDate }: AddEvent
     startTime: '09:00',
     category: 'Work',
     meetingLink: '',
+    travelTime: 0,
   });
 
   if (!isOpen) return null;
@@ -34,6 +35,7 @@ export default function AddEventModal({ isOpen, onClose, initialDate }: AddEvent
       startTime: event.startTime,
       category: event.category as any || 'Work',
       meetingLink: event.meetingLink,
+      travelTime: event.travelTime,
     } as PlannerEvent);
 
     onClose();
@@ -43,6 +45,7 @@ export default function AddEventModal({ isOpen, onClose, initialDate }: AddEvent
       startTime: '09:00',
       category: 'Work',
       meetingLink: '',
+      travelTime: 0,
     });
   };
 
@@ -159,6 +162,22 @@ export default function AddEventModal({ isOpen, onClose, initialDate }: AddEvent
                 value={event.meetingLink}
                 className="w-full bg-slate-800 border border-slate-700/50 rounded-2xl py-4 pl-12 pr-4 text-slate-100 font-bold focus:outline-none focus:ring-2 focus:ring-blue-600/50 transition-all text-sm"
                 onChange={(e) => setEvent({...event, meetingLink: e.target.value})}
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mb-3 block">Travel Time (Minutes)</label>
+            <div className="relative">
+              <Car className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+              <input 
+                type="number" 
+                placeholder="0"
+                min="0"
+                step="5"
+                value={event.travelTime}
+                className="w-full bg-slate-800 border border-slate-700/50 rounded-2xl py-4 pl-12 pr-4 text-slate-100 font-bold focus:outline-none focus:ring-2 focus:ring-blue-600/50 transition-all text-sm"
+                onChange={(e) => setEvent({...event, travelTime: parseInt(e.target.value) || 0})}
               />
             </div>
           </div>

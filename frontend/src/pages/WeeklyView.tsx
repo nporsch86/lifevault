@@ -1,4 +1,4 @@
-import { ChevronLeft, ChevronRight, Plus, CheckSquare, Clock, Wallet, FileText, Check, Video } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, CheckSquare, Clock, Wallet, FileText, Check, Video, Car } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import { usePlanner } from '../store/PlannerContext';
@@ -138,18 +138,26 @@ export default function WeeklyView() {
                         key={event.id} 
                         className={`p-2.5 rounded-xl border shadow-lg shadow-black/10 relative group/item transition-all ${billStyle}`}
                       >
-                        <div className="flex items-center justify-between mb-0.5">
-                          <p className="text-[11px] font-black leading-tight truncate mr-1">
-                            {isBill && <FileText className="w-2.5 h-2.5 inline mr-1 mb-0.5" />}
-                            {event.title}
-                          </p>
-                          {isBill && (
-                            <button 
-                              onClick={(e) => { e.stopPropagation(); togglePaid(event.id); }}
-                              className={`w-4 h-4 rounded-md border flex items-center justify-center transition-all ${event.isPaid ? 'bg-emerald-500 border-emerald-400' : 'border-slate-500/50 hover:border-blue-500'}`}
-                            >
-                              {event.isPaid && <Check className="w-3 h-3 text-white" />}
-                            </button>
+                        <div className="mb-0.5">
+                          <div className="flex items-center justify-between">
+                            <p className="text-[11px] font-black leading-tight truncate mr-1">
+                              {isBill && <FileText className="w-2.5 h-2.5 inline mr-1 mb-0.5" />}
+                              {event.title}
+                            </p>
+                            {isBill && (
+                              <button 
+                                onClick={(e) => { e.stopPropagation(); togglePaid(event.id); }}
+                                className={`w-4 h-4 rounded-md border flex items-center justify-center transition-all ${event.isPaid ? 'bg-emerald-500 border-emerald-400' : 'border-slate-500/50 hover:border-blue-500'}`}
+                              >
+                                {event.isPaid && <Check className="w-3 h-3 text-white" />}
+                              </button>
+                            )}
+                          </div>
+                          {event.travelTime && event.travelTime > 0 && (
+                            <div className="flex items-center text-[7px] font-black uppercase opacity-60 mt-1">
+                              <Car className="w-2 h-2 mr-1" />
+                              {event.travelTime}m travel
+                            </div>
                           )}
                         </div>
                         {event.meetingLink && (

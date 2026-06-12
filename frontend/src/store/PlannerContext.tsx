@@ -12,6 +12,7 @@ export interface PlannerEvent {
   amount?: number;
   isPaid?: boolean;
   meetingLink?: string;
+  travelTime?: number; // duration in minutes
 }
 
 export interface PlannerTask {
@@ -34,6 +35,7 @@ interface PlannerContextType {
   budgets: Budget[];
   isPremium: boolean;
   addEvent: (event: PlannerEvent) => void;
+  updateEvent: (id: string, updates: Partial<PlannerEvent>) => void;
   addTask: (task: PlannerTask) => void;
   toggleTask: (id: string) => void;
   togglePaid: (eventId: string) => void;
@@ -89,6 +91,9 @@ export const PlannerProvider: React.FC<{ children: ReactNode }> = ({ children })
   ]);
 
   const addEvent = (event: PlannerEvent) => setEvents([...events, event]);
+  const updateEvent = (id: string, updates: Partial<PlannerEvent>) => {
+    setEvents(events.map(e => e.id === id ? { ...e, ...updates } : e));
+  };
   const addTask = (task: PlannerTask) => setTasks([...tasks, task]);
   const toggleTask = (id: string) => {
     setTasks(tasks.map(t => t.id === id ? { ...t, completed: !t.completed } : t));
@@ -111,7 +116,7 @@ export const PlannerProvider: React.FC<{ children: ReactNode }> = ({ children })
   return (
     <PlannerContext.Provider value={{ 
       events, tasks, budgets, isPremium, 
-      addEvent, addTask, toggleTask, togglePaid, updateBudget,
+      addEvent, updateEvent, addTask, toggleTask, togglePaid, updateBudget,
       setPremium: handleSetPremium 
     }}>
       {children}

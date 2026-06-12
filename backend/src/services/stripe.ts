@@ -4,7 +4,7 @@ import { updateSubscription } from "../models/user.js";
 
 // Initialize Stripe
 const stripeKey = process.env.STRIPE_SECRET_KEY || "";
-const stripe = stripeKey ? new Stripe(stripeKey, { apiVersion: "2025-02-24.acacia" }) : null;
+const stripe = stripeKey ? new Stripe(stripeKey) : null;
 
 const PRICE_IDS = {
   monthly: process.env.STRIPE_PRICE_MONTHLY || "",
@@ -97,7 +97,7 @@ export async function createOneTimeCheckout(
 
 // --- Webhook Handlers ---
 
-export async function handleCheckoutCompleted(payload: Stripe.CheckoutSession): Promise<void> {
+export async function handleCheckoutCompleted(payload: any): Promise<void> {
   const userId = payload.metadata?.userId;
   const type = payload.metadata?.type || "subscription";
 

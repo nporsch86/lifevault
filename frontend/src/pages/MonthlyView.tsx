@@ -1,4 +1,4 @@
-import { ChevronLeft, ChevronRight, CheckSquare, Plus, FileText, Video } from 'lucide-react';
+import { ChevronLeft, ChevronRight, CheckSquare, Plus, FileText, Video, Car } from 'lucide-react';
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { usePlanner } from '../store/PlannerContext';
@@ -261,6 +261,9 @@ export default function MonthlyView() {
                                   >
                                     <Video className="w-2 h-2" />
                                   </a>
+                                )}
+                                {event.travelTime && event.travelTime > 0 && (
+                                  <Car className="w-2 h-2 mr-1 opacity-60" />
                                 )}
                                 {isBill && event.amount && (
                                   <span className="opacity-80 font-black">${event.amount}</span>
