@@ -1,4 +1,4 @@
-import { createClient } from "@libsql/client";
+import Database from "better-sqlite3";
 import dotenv from "dotenv";
 import * as fs from "fs";
 import * as path from "path";
@@ -11,15 +11,35 @@ if (!fs.existsSync(dbDir)) {
   fs.mkdirSync(dbDir, { recursive: true });
 }
 
-const dbPath = process.env.DATABASE_URL 
-  ? process.env.DATABASE_URL 
-  : process.env.TURSO_DATABASE_URL 
-    ? process.env.TURSO_DATABASE_URL 
-    : `file:${path.join(dbDir, "lifevault.db")}`;
+const dbPath = path.join(dbDir, "lifevault.db");
+const nativeDb = new Database(dbPath);
+nativeDb.pragma("journal_mode = WAL");
 
-const db = createClient({
-  url: dbPath,
-  authToken: process.env.TURSO_AUTH_TOKEN || undefined,
-});
+// Wrapper to match libsql's async API
+const db = {
+  async execute(params: { sql: string; args?: any[] } | string) {
+    const sql = typeof params === "string" ? params : params.sql;
+    const args = typeof params === "string" ? [] : (params.args || []);
+    const stmt = nativeDb.prepare(sql);
+    if (sql.trim().toUpperCase().startsWith("SELECT") || sql.includes("RETURNING")) {
+      const rows = stmt.all(...args);
+      return { rows };
+    } else {
+      stmt.run(...args);
+      return { rows: [] };
+    }
+  },
+  async batch(statements: string[]) {
+    const tx = nativeDb.transaction(() => {
+      for (const sql of statements) {
+        nativeDb.prepare(sql).run();
+      }
+    });
+    tx();
+  },
+  close() {
+    nativeDb.close();
+  }
+};
 
 export default db;
