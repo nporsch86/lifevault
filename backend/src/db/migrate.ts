@@ -135,6 +135,18 @@ const migrations: string[] = [
     UNIQUE(user_id)
   )`,
 
+  `CREATE TABLE IF NOT EXISTS microsoft_calendar_tokens (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    access_token TEXT NOT NULL,
+    refresh_token TEXT,
+    email TEXT,
+    expires_at TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+    UNIQUE(user_id)
+  )`,
+
   `CREATE TABLE IF NOT EXISTS sync_states (
     id TEXT PRIMARY KEY,
     user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
