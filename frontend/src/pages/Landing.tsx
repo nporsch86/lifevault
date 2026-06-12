@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { CalendarDays, CheckSquare, Wallet, ShieldCheck, StickyNote, ArrowRight, Star, Clock, Smartphone, Mail, MessageSquare } from 'lucide-react';
+import { CalendarDays, CheckSquare, Wallet, ShieldCheck, StickyNote, ArrowRight, Star, Clock, Mail, MessageSquare } from 'lucide-react';
 
 export default function Landing() {
   const [scrolled, setScrolled] = useState(false);
@@ -111,7 +111,7 @@ export default function Landing() {
       <section id="download" className="py-20 px-6 bg-[#0a0c10]">
         <div className="max-w-4xl mx-auto text-center">
           <div className="inline-flex items-center bg-blue-500/10 text-blue-400 px-4 py-1.5 rounded-full text-sm font-medium mb-6 border border-blue-500/20">
-            <Smartphone className="w-4 h-4 mr-2" /> Works on every device
+            📱 Works on every device
           </div>
           <h2 className="text-3xl md:text-4xl font-black mb-6">Use Lifevault anywhere</h2>
           <p className="text-slate-400 mb-12 max-w-xl mx-auto">Install it on your phone, tablet, or desktop — it works offline and syncs everywhere.</p>

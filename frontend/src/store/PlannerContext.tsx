@@ -145,10 +145,15 @@ export const PlannerProvider: React.FC<{ children: ReactNode }> = ({ children })
 
   return (
     <PlannerContext.Provider value={{ 
-      events, tasks, budgets, isPremium, 
-      addEvent, updateEvent, addTask, toggleTask, togglePaid, updateBudget,
-      setPremium: handleSetPremium,
-      respondToInvite
+      events, tasks, budgets, isPremium,
+            addEvent, updateEvent, addTask, toggleTask, togglePaid, updateBudget,
+            setPremium: handleSetPremium,
+            respondToInvite,
+            sharedCalendars: [],
+            myShares: [],
+            shareCalendar: () => {},
+            removeShare: () => {},
+            respondToSharedCalendar: () => {}
     }}>
       {children}
     </PlannerContext.Provider>
