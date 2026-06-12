@@ -1,4 +1,4 @@
-import { Plus, MoreVertical, CheckCircle2, Circle, Clock, CheckSquare, Wallet, FileText, Check, DollarSign, AlertCircle, Video, Car } from 'lucide-react';
+import { Plus, MoreVertical, CheckCircle2, Circle, Clock, CheckSquare, Wallet, FileText, Check, DollarSign, AlertCircle, Video, Car, Share2, Users, X } from 'lucide-react';
 import React, { useState, useEffect } from 'react';
 import { usePlanner } from '../store/PlannerContext';
 import type { PlannerTask } from '../store/PlannerContext';
@@ -25,7 +25,7 @@ const categoryColors: Record<string, string> = {
 };
 
 export default function DailyView() {
-  const { events, tasks, budgets, toggleTask, addTask, togglePaid, addEvent, updateEvent } = usePlanner();
+  const { events, tasks, budgets, toggleTask, addTask, togglePaid, addEvent, updateEvent, respondToInvite } = usePlanner();
   const [currentTime, setCurrentTime] = useState(new Date());
 
   const handleVoiceCommand = (text: string) => {
@@ -81,6 +81,9 @@ export default function DailyView() {
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [editingTitle, setEditingTitle] = useState('');
   const [isEventModalOpen, setIsEventModalOpen] = useState(false);
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+  const [sharingEventId, setSharingEventId] = useState<string | null>(null);
+  const [newInvitee, setNewInvitee] = useState('');
 
   const todayTasks = tasks.filter(t => t.date === todayDateStr);
   const todayEvents = events.filter(e => e.date === todayDateStr);
@@ -129,6 +132,29 @@ export default function DailyView() {
     if (diffDays < 0) return 'overdue';
     if (diffDays <= 3) return 'soon';
     return 'pending';
+  };
+
+  const addInviteeToSharingEvent = () => {
+    if (newInvitee && sharingEventId) {
+      const event = events.find(e => e.id === sharingEventId);
+      if (event && !event.invitees?.includes(newInvitee)) {
+        updateEvent(sharingEventId, { 
+          invitees: [...(event.invitees || []), newInvitee] 
+        });
+        setNewInvitee('');
+      }
+    }
+  };
+
+  const removeInviteeFromSharingEvent = (email: string) => {
+    if (sharingEventId) {
+      const event = events.find(e => e.id === sharingEventId);
+      if (event) {
+        updateEvent(sharingEventId, { 
+          invitees: event.invitees?.filter(i => i !== email) 
+        });
+      }
+    }
   };
 
   return (
@@ -250,6 +276,57 @@ export default function DailyView() {
                                   <Video className="w-3 h-3 text-blue-400" />
                                   <span>Join Meeting</span>
                                 </a>
+                              )}
+
+                              {event.invitees && event.invitees.length > 0 && (
+                                <div className="mt-3 flex items-center space-x-2">
+                                  <div className="flex -space-x-2">
+                                    {event.invitees.slice(0, 3).map((email, i) => (
+                                      <div key={i} className="w-5 h-5 rounded-full bg-slate-700 border-2 border-slate-800 flex items-center justify-center text-[8px] font-black uppercase text-blue-400">
+                                        {email[0]}
+                                      </div>
+                                    ))}
+                                    {event.invitees.length > 3 && (
+                                      <div className="w-5 h-5 rounded-full bg-slate-700 border-2 border-slate-800 flex items-center justify-center text-[8px] font-black text-slate-300">
+                                        +{event.invitees.length - 3}
+                                      </div>
+                                    )}
+                                  </div>
+                                  <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">{event.invitees.length} GUESTS</span>
+                                  <button 
+                                    onClick={(e) => { e.stopPropagation(); setSharingEventId(event.id); setIsShareModalOpen(true); }}
+                                    className="p-1 hover:bg-white/10 rounded text-slate-400 hover:text-blue-400 transition-colors"
+                                  >
+                                    <Share2 className="w-3 h-3" />
+                                  </button>
+                                </div>
+                              )}
+
+                              {!event.invitees && (
+                                <button 
+                                  onClick={(e) => { e.stopPropagation(); setSharingEventId(event.id); setIsShareModalOpen(true); }}
+                                  className="mt-3 flex items-center space-x-2 text-[9px] font-black uppercase text-slate-500 hover:text-blue-400 transition-colors"
+                                >
+                                  <Share2 className="w-3 h-3" />
+                                  <span>Share / Invite</span>
+                                </button>
+                              )}
+
+                              {event.inviteStatus === 'pending' && (
+                                <div className="mt-3 flex items-center space-x-2">
+                                  <button 
+                                    onClick={(e) => { e.stopPropagation(); respondToInvite(event.id, 'accepted'); }}
+                                    className="px-3 py-1 bg-emerald-600 text-white text-[9px] font-black rounded-lg uppercase tracking-widest hover:bg-emerald-500 transition-colors"
+                                  >
+                                    Accept
+                                  </button>
+                                  <button 
+                                    onClick={(e) => { e.stopPropagation(); respondToInvite(event.id, 'declined'); }}
+                                    className="px-3 py-1 bg-slate-700 text-slate-300 text-[9px] font-black rounded-lg uppercase tracking-widest hover:bg-slate-600 transition-colors"
+                                  >
+                                    Decline
+                                  </button>
+                                </div>
                               )}
                             </div>
                             {isBill && (
@@ -403,6 +480,81 @@ export default function DailyView() {
         onClose={() => setIsEventModalOpen(false)} 
         initialDate={todayDateStr}
       />
+
+      {/* Share Modal */}
+      {isShareModalOpen && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-6 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-300">
+          <div className="bg-[#16191e] w-full max-w-md rounded-[2.5rem] border border-slate-800 p-8 shadow-2xl relative">
+            <button 
+              onClick={() => setIsShareModalOpen(false)}
+              className="absolute top-6 right-6 p-2 text-slate-500 hover:text-white transition-colors"
+            >
+              <X className="w-6 h-6" />
+            </button>
+            
+            <div className="flex items-center space-x-3 mb-8">
+              <div className="p-3 bg-blue-500/10 rounded-2xl text-blue-500">
+                <Share2 className="w-6 h-6" />
+              </div>
+              <h3 className="text-xl font-black text-slate-100 tracking-tight uppercase tracking-widest">Share Event</h3>
+            </div>
+
+            <div className="space-y-6">
+              <div>
+                <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mb-3 block">Invite Guests</label>
+                <div className="flex space-x-2 mb-3">
+                  <div className="relative flex-1">
+                    <Users className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                    <input 
+                      type="email" 
+                      placeholder="email@example.com"
+                      value={newInvitee}
+                      className="w-full bg-slate-800 border border-slate-700/50 rounded-2xl py-4 pl-12 pr-4 text-slate-100 font-bold focus:outline-none focus:ring-2 focus:ring-blue-600/50 transition-all text-sm"
+                      onChange={(e) => setNewInvitee(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addInviteeToSharingEvent())}
+                    />
+                  </div>
+                  <button 
+                    onClick={addInviteeToSharingEvent}
+                    className="bg-slate-800 border border-slate-700/50 p-4 rounded-2xl text-blue-500 hover:bg-slate-700 transition-all"
+                  >
+                    <Plus className="w-6 h-6" />
+                  </button>
+                </div>
+                
+                <div className="space-y-2 max-h-48 overflow-y-auto custom-scrollbar">
+                  {events.find(e => e.id === sharingEventId)?.invitees?.map(email => (
+                    <div key={email} className="bg-slate-800/50 border border-slate-700/30 rounded-xl px-4 py-3 flex items-center justify-between group">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-8 h-8 rounded-full bg-blue-600/10 flex items-center justify-center text-[10px] font-black text-blue-500 uppercase">
+                          {email[0]}
+                        </div>
+                        <span className="text-xs font-bold text-slate-300">{email}</span>
+                      </div>
+                      <button 
+                        onClick={() => removeInviteeFromSharingEvent(email)}
+                        className="text-slate-600 hover:text-rose-500 transition-colors opacity-0 group-hover:opacity-100"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ))}
+                  {(!events.find(e => e.id === sharingEventId)?.invitees || events.find(e => e.id === sharingEventId)?.invitees?.length === 0) && (
+                    <p className="text-[10px] font-bold text-slate-600 text-center py-4 uppercase tracking-widest">No guests invited yet</p>
+                  )}
+                </div>
+              </div>
+
+              <button 
+                onClick={() => setIsShareModalOpen(false)}
+                className="w-full bg-blue-600 text-white py-5 rounded-2xl font-black shadow-xl shadow-blue-600/20 hover:bg-blue-500 transition-all uppercase tracking-[0.2em] text-xs flex items-center justify-center"
+              >
+                Done
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -13,6 +13,8 @@ export interface PlannerEvent {
   isPaid?: boolean;
   meetingLink?: string;
   travelTime?: number; // duration in minutes
+  invitees?: string[];
+  inviteStatus?: 'accepted' | 'declined' | 'pending';
 }
 
 export interface PlannerTask {
@@ -29,11 +31,21 @@ export interface Budget {
   limit: number;
 }
 
+export interface SharedCalendar {
+  id: string;
+  name: string;
+  owner: string;
+  permission: 'view' | 'edit';
+  status: 'pending' | 'accepted' | 'declined';
+}
+
 interface PlannerContextType {
   events: PlannerEvent[];
   tasks: PlannerTask[];
   budgets: Budget[];
   isPremium: boolean;
+  sharedCalendars: SharedCalendar[];
+  myShares: SharedCalendar[];
   addEvent: (event: PlannerEvent) => void;
   updateEvent: (id: string, updates: Partial<PlannerEvent>) => void;
   addTask: (task: PlannerTask) => void;
@@ -41,6 +53,10 @@ interface PlannerContextType {
   togglePaid: (eventId: string) => void;
   updateBudget: (category: string, limit: number) => void;
   setPremium: (premium: boolean) => void;
+  respondToInvite: (eventId: string, status: 'accepted' | 'declined') => void;
+  shareCalendar: (email: string, permission: 'view' | 'edit') => void;
+  removeShare: (id: string) => void;
+  respondToSharedCalendar: (id: string, status: 'accepted' | 'declined') => void;
 }
 
 const PlannerContext = createContext<PlannerContextType | undefined>(undefined);
@@ -79,6 +95,16 @@ export const PlannerProvider: React.FC<{ children: ReactNode }> = ({ children })
     { id: 'b4', title: 'Gym Membership', date: '2025-10-18', category: 'Bill', amount: 45.00, isPaid: false },
     { id: 'b5', title: 'Phone Bill', date: '2025-10-30', category: 'Bill', amount: 55.00, isPaid: false },
     { id: 'b6', title: 'AWS Cloud', date: '2025-10-27', category: 'Bill', amount: 12.50, isPaid: false },
+    { 
+      id: 'inv1', 
+      title: 'Strategy Session', 
+      date: '2025-10-29', 
+      startTime: '13:00', 
+      endTime: '14:30', 
+      category: 'Work', 
+      inviteStatus: 'pending',
+      invitees: ['jane@example.com', 'mark@example.com', 'jamie@email.com']
+    },
   ]);
 
   const [tasks, setTasks] = useState<PlannerTask[]>([
@@ -113,11 +139,16 @@ export const PlannerProvider: React.FC<{ children: ReactNode }> = ({ children })
     localStorage.setItem('lifevault_premium', val.toString());
   };
 
+  const respondToInvite = (eventId: string, status: 'accepted' | 'declined') => {
+    setEvents(events.map(e => e.id === eventId ? { ...e, inviteStatus: status } : e));
+  };
+
   return (
     <PlannerContext.Provider value={{ 
       events, tasks, budgets, isPremium, 
       addEvent, updateEvent, addTask, toggleTask, togglePaid, updateBudget,
-      setPremium: handleSetPremium 
+      setPremium: handleSetPremium,
+      respondToInvite
     }}>
       {children}
     </PlannerContext.Provider>

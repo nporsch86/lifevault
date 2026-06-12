@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Calendar, Clock, Tag, Link as LinkIcon, Video, ArrowRight, Car } from 'lucide-react';
+import { X, Calendar, Clock, Tag, Link as LinkIcon, Video, ArrowRight, Car, Users, Plus as PlusIcon } from 'lucide-react';
 import { usePlanner } from '../store/PlannerContext';
 import type { PlannerEvent } from '../store/PlannerContext';
 
@@ -20,7 +20,9 @@ export default function AddEventModal({ isOpen, onClose, initialDate }: AddEvent
     category: 'Work',
     meetingLink: '',
     travelTime: 0,
+    invitees: [],
   });
+  const [newInvitee, setNewInvitee] = useState('');
 
   if (!isOpen) return null;
 
@@ -36,6 +38,8 @@ export default function AddEventModal({ isOpen, onClose, initialDate }: AddEvent
       category: event.category as any || 'Work',
       meetingLink: event.meetingLink,
       travelTime: event.travelTime,
+      invitees: event.invitees,
+      inviteStatus: 'accepted',
     } as PlannerEvent);
 
     onClose();
@@ -46,7 +50,20 @@ export default function AddEventModal({ isOpen, onClose, initialDate }: AddEvent
       category: 'Work',
       meetingLink: '',
       travelTime: 0,
+      invitees: [],
     });
+    setNewInvitee('');
+  };
+
+  const addInvitee = () => {
+    if (newInvitee && !event.invitees?.includes(newInvitee)) {
+      setEvent({ ...event, invitees: [...(event.invitees || []), newInvitee] });
+      setNewInvitee('');
+    }
+  };
+
+  const removeInvitee = (email: string) => {
+    setEvent({ ...event, invitees: event.invitees?.filter(i => i !== email) });
   };
 
   const quickAddMeet = () => {
@@ -179,6 +196,45 @@ export default function AddEventModal({ isOpen, onClose, initialDate }: AddEvent
                 className="w-full bg-slate-800 border border-slate-700/50 rounded-2xl py-4 pl-12 pr-4 text-slate-100 font-bold focus:outline-none focus:ring-2 focus:ring-blue-600/50 transition-all text-sm"
                 onChange={(e) => setEvent({...event, travelTime: parseInt(e.target.value) || 0})}
               />
+            </div>
+          </div>
+
+          <div>
+            <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mb-3 block">Invite Guests</label>
+            <div className="flex space-x-2 mb-3">
+              <div className="relative flex-1">
+                <Users className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                <input 
+                  type="email" 
+                  placeholder="email@example.com"
+                  value={newInvitee}
+                  className="w-full bg-slate-800 border border-slate-700/50 rounded-2xl py-4 pl-12 pr-4 text-slate-100 font-bold focus:outline-none focus:ring-2 focus:ring-blue-600/50 transition-all text-sm"
+                  onChange={(e) => setNewInvitee(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addInvitee())}
+                />
+              </div>
+              <button 
+                type="button"
+                onClick={addInvitee}
+                className="bg-slate-800 border border-slate-700/50 p-4 rounded-2xl text-blue-500 hover:bg-slate-700 transition-all"
+              >
+                <PlusIcon className="w-6 h-6" />
+              </button>
+            </div>
+            
+            <div className="flex flex-wrap gap-2 max-h-24 overflow-y-auto custom-scrollbar">
+              {event.invitees?.map(email => (
+                <div key={email} className="bg-blue-600/10 border border-blue-600/20 rounded-full px-4 py-1.5 flex items-center space-x-2 group">
+                  <span className="text-[10px] font-bold text-blue-400">{email}</span>
+                  <button 
+                    type="button"
+                    onClick={() => removeInvitee(email)}
+                    className="text-blue-600/50 hover:text-blue-400 transition-colors"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </div>
+              ))}
             </div>
           </div>
 

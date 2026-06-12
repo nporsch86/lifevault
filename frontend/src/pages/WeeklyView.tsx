@@ -1,4 +1,4 @@
-import { ChevronLeft, ChevronRight, Plus, CheckSquare, Clock, Wallet, FileText, Check, Video, Car } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, CheckSquare, Clock, Wallet, FileText, Check, Video, Car, Users } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import { usePlanner } from '../store/PlannerContext';
@@ -157,6 +157,12 @@ export default function WeeklyView() {
                             <div className="flex items-center text-[7px] font-black uppercase opacity-60 mt-1">
                               <Car className="w-2 h-2 mr-1" />
                               {event.travelTime}m travel
+                            </div>
+                          )}
+                          {event.invitees && event.invitees.length > 0 && (
+                            <div className="flex items-center text-[7px] font-black uppercase text-blue-400/70 mt-1">
+                              <Users className="w-2 h-2 mr-1" />
+                              {event.invitees.length} Guests
                             </div>
                           )}
                         </div>

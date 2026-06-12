@@ -20,6 +20,8 @@ import subscriptionsRoutes from "./routes/subscriptions.js";
 import outlookSyncRoutes from "./routes/outlookSync.js";
 import budgetsRoutes from "./routes/budgets.js";
 import aiNotesRoutes from "./routes/aiNotes.js";
+import publicRoutes from "./routes/public.js";
+import sharingRoutes from "./routes/sharing.js";
 
 const app = new Hono();
 
@@ -49,6 +51,7 @@ app.route("/api/subscriptions", subscriptionsRoutes);
 app.route("/api/outlook", outlookSyncRoutes);
 app.route("/api/budgets", budgetsRoutes);
 app.route("/api/ai-notes", aiNotesRoutes);
+app.route("/api/sharing", sharingRoutes);
 
 // 404 handler
 app.notFound((c) => c.json({ error: "Not found" }, 404));
@@ -75,4 +78,4 @@ runMigrations()
     process.exit(1);
   });
 
-export default app;
+export default app;app.route("/api", publicRoutes);

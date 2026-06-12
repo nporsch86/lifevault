@@ -190,6 +190,44 @@ const migrations: string[] = [
     updated_at TEXT NOT NULL DEFAULT (datetime('now')),
     UNIQUE(user_id, category, month)
   )`,
+
+  `CREATE TABLE IF NOT EXISTS waitlist (
+    id TEXT PRIMARY KEY,
+    email TEXT NOT NULL UNIQUE,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  )`,
+
+  `CREATE TABLE IF NOT EXISTS suggestions (
+    id TEXT PRIMARY KEY,
+    content TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  )`,
+
+  `CREATE TABLE IF NOT EXISTS calendar_shares (
+    id TEXT PRIMARY KEY,
+    calendar_id TEXT NOT NULL REFERENCES calendars(id) ON DELETE CASCADE,
+    owner_user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    shared_with_email TEXT NOT NULL,
+    shared_with_user_id TEXT REFERENCES users(id) ON DELETE SET NULL,
+    permission TEXT NOT NULL DEFAULT 'view' CHECK(permission IN ('view','edit')),
+    status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','accepted','declined')),
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+    UNIQUE(calendar_id, shared_with_email)
+  )`,
+
+  `CREATE TABLE IF NOT EXISTS event_invites (
+    id TEXT PRIMARY KEY,
+    event_id TEXT NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+    calendar_id TEXT NOT NULL,
+    invited_by_user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    invited_email TEXT NOT NULL,
+    invited_user_id TEXT REFERENCES users(id) ON DELETE SET NULL,
+    status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','accepted','declined','maybe')),
+    rsvp_at TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    UNIQUE(event_id, invited_email)
+  )`,
 ];
 
 export async function runMigrations() {
@@ -240,6 +278,11 @@ export async function runMigrations() {
   await db.execute(`CREATE INDEX IF NOT EXISTS idx_ms_tokens_user ON microsoft_calendar_tokens(user_id)`);
   await db.execute(`CREATE INDEX IF NOT EXISTS idx_stripe_customers_user ON stripe_customers(user_id)`);
   await db.execute(`CREATE INDEX IF NOT EXISTS idx_budgets_user_month ON budgets(user_id, month)`);
+  await db.execute(`CREATE INDEX IF NOT EXISTS idx_calendar_shares_calendar ON calendar_shares(calendar_id)`);
+  await db.execute(`CREATE INDEX IF NOT EXISTS idx_calendar_shares_email ON calendar_shares(shared_with_email)`);
+  await db.execute(`CREATE INDEX IF NOT EXISTS idx_calendar_shares_user ON calendar_shares(shared_with_user_id)`);
+  await db.execute(`CREATE INDEX IF NOT EXISTS idx_event_invites_event ON event_invites(event_id)`);
+  await db.execute(`CREATE INDEX IF NOT EXISTS idx_event_invites_email ON event_invites(invited_email)`);
 
   console.log("All indexes created.");
 }
