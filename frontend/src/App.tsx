@@ -1,6 +1,6 @@
-
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { PlannerProvider } from './store/PlannerContext';
+import Landing from './pages/Landing';
 import AppLayout from './layouts/AppLayout';
 import DailyView from './pages/DailyView';
 import WeeklyView from './pages/WeeklyView';
@@ -18,7 +18,8 @@ function App() {
     <PlannerProvider>
       <BrowserRouter>
         <Routes>
-          <Route path="/" element={<AppLayout />}>
+          <Route path="/" element={<Landing />} />
+          <Route path="/app" element={<AppLayout />}>
             <Route index element={<DailyView />} />
             <Route path="weekly" element={<WeeklyView />} />
             <Route path="monthly" element={<MonthlyView />} />
