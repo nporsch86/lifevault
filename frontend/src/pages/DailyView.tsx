@@ -88,6 +88,21 @@ export default function DailyView() {
 
   const todayTasks = tasks.filter(t => t.date === todayDateStr);
   const todayEvents = events.filter(e => e.date === todayDateStr);
+  
+  // Merge expenses with due dates into events for display
+  const billEvents = expenses
+    .filter(ex => ex.dueDate === todayDateStr)
+    .map(ex => ({
+      id: `bill-${ex.id}`,
+      title: `${ex.note} Due`,
+      date: ex.date,
+      category: 'Bill' as const,
+      amount: ex.amount,
+      isPaid: false, // in a real app, check if transaction exists
+      startTime: '09:00', // Default bills to 9am
+    }));
+
+  const displayEvents = [...todayEvents, ...billEvents];
 
   const handleAddTask = (e: React.FormEvent) => {
     e.preventDefault();

@@ -33,9 +33,43 @@ export interface PlannerTask {
   category: string;
 }
 
+export interface Category {
+  id: string;
+  name: string;
+  icon: string;
+  color: string;
+}
+
 export interface Budget {
   category: string;
   limit: number;
+  rollover: number; // unused budget from previous month
+  rolloverEnabled: boolean;
+}
+
+export interface SavingsGoal {
+  id: string;
+  title: string;
+  targetAmount: number;
+  currentAmount: number;
+  deadline?: string;
+  category: string;
+  icon?: string;
+}
+
+export interface Expense {
+  id: string;
+  amount: number;
+  category: string;
+  note: string;
+  date: string;
+  dueDate?: string; // for bills/expenses with separate due dates
+  withdrawalDate?: string; // when the money actually leaves
+  isRecurring: boolean;
+  frequency?: 'daily' | 'weekly' | 'monthly';
+  receiptImage?: string;
+  isTaxDeductible: boolean;
+  autoGenerate?: boolean;
 }
 
 export interface SharedCalendar {
@@ -50,6 +84,9 @@ interface PlannerContextType {
   events: PlannerEvent[];
   tasks: PlannerTask[];
   budgets: Budget[];
+  expenses: Expense[];
+  goals: SavingsGoal[];
+  categories: Category[];
   isPremium: boolean;
   sharedCalendars: SharedCalendar[];
   myShares: SharedCalendar[];
@@ -58,7 +95,13 @@ interface PlannerContextType {
   addTask: (task: PlannerTask) => void;
   toggleTask: (id: string) => void;
   togglePaid: (eventId: string) => void;
-  updateBudget: (category: string, limit: number) => void;
+  updateBudget: (category: string, updates: Partial<Budget>) => void;
+  addBudget: (budget: Budget) => void;
+  addExpense: (expense: Expense) => void;
+  updateExpense: (id: string, updates: Partial<Expense>) => void;
+  addGoal: (goal: SavingsGoal) => void;
+  updateGoal: (id: string, updates: Partial<SavingsGoal>) => void;
+  addCategory: (category: Category) => void;
   setPremium: (premium: boolean) => void;
   respondToInvite: (eventId: string, status: 'accepted' | 'declined') => void;
   shareCalendar: (email: string, permission: 'view' | 'edit') => void;
@@ -72,12 +115,44 @@ export const PlannerProvider: React.FC<{ children: ReactNode }> = ({ children })
   const [budgets, setBudgets] = useState<Budget[]>(() => {
     const saved = localStorage.getItem('lifevault_budgets');
     return saved ? JSON.parse(saved) : [
-      { category: 'Food', limit: 500 },
-      { category: 'Transport', limit: 200 },
-      { category: 'Shopping', limit: 300 },
-      { category: 'Bills', limit: 1500 },
-      { category: 'Health', limit: 150 },
-      { category: 'Other', limit: 100 },
+      { category: 'Food', limit: 500, rollover: 0, rolloverEnabled: false },
+      { category: 'Transport', limit: 200, rollover: 0, rolloverEnabled: false },
+      { category: 'Shopping', limit: 300, rollover: 0, rolloverEnabled: false },
+      { category: 'Bills', limit: 1500, rollover: 0, rolloverEnabled: false },
+      { category: 'Health', limit: 150, rollover: 0, rolloverEnabled: false },
+      { category: 'Other', limit: 100, rollover: 0, rolloverEnabled: false },
+    ];
+  });
+
+  const [categories, setCategories] = useState<Category[]>(() => {
+    const saved = localStorage.getItem('lifevault_categories');
+    return saved ? JSON.parse(saved) : [
+      { id: '1', name: 'Food', icon: '🍔', color: '#EF4444' },
+      { id: '2', name: 'Transport', icon: '🚗', color: '#3B82F6' },
+      { id: '3', name: 'Shopping', icon: '🛍️', color: '#EC4899' },
+      { id: '4', name: 'Bills', icon: '📄', color: '#F59E0B' },
+      { id: '5', name: 'Health', icon: '🏥', color: '#10B981' },
+      { id: '6', name: 'Other', icon: '📦', color: '#6B7280' },
+    ];
+  });
+
+  const [expenses, setExpenses] = useState<Expense[]>(() => {
+    const saved = localStorage.getItem('lifevault_expenses');
+    return saved ? JSON.parse(saved) : [
+      { id: '1', amount: 84.50, category: 'Food', note: 'Groceries at Whole Foods', date: '2025-10-15', isRecurring: false, isTaxDeductible: false },
+      { id: '2', amount: 23.00, category: 'Transport', note: 'Uber to Meeting', date: '2025-10-14', isRecurring: false, isTaxDeductible: true },
+      { id: '3', amount: 120.00, category: 'Shopping', note: 'New Sneakers', date: '2025-10-14', isRecurring: false, isTaxDeductible: false },
+      { id: '4', amount: 450.00, category: 'Bills', note: 'Rent Component', date: '2025-10-13', isRecurring: true, frequency: 'monthly', isTaxDeductible: true },
+      { id: '5', amount: 95.00, category: 'Bills', note: 'Water Bill', date: '2025-10-20', dueDate: '2025-10-20', isRecurring: false, isTaxDeductible: false },
+      { id: '6', amount: 120.00, category: 'Bills', note: 'Internet Bill', date: '2025-10-25', dueDate: '2025-10-25', isRecurring: true, frequency: 'monthly', isTaxDeductible: false },
+    ];
+  });
+
+  const [goals, setGoals] = useState<SavingsGoal[]>(() => {
+    const saved = localStorage.getItem('lifevault_goals');
+    return saved ? JSON.parse(saved) : [
+      { id: 'g1', title: 'Emergency Fund', targetAmount: 5000, currentAmount: 1200, category: 'Other' },
+      { id: 'g2', title: 'New Car', targetAmount: 25000, currentAmount: 3500, category: 'Transport' },
     ];
   });
 
@@ -147,10 +222,46 @@ export const PlannerProvider: React.FC<{ children: ReactNode }> = ({ children })
     setEvents(events.map(e => e.id === eventId ? { ...e, isPaid: !e.isPaid } : e));
   };
 
-  const updateBudget = (category: string, limit: number) => {
-    const updated = budgets.map(b => b.category === category ? { ...b, limit } : b);
+  const updateBudget = (category: string, updates: Partial<Budget>) => {
+    const updated = budgets.map(b => b.category === category ? { ...b, ...updates } : b);
     setBudgets(updated);
     localStorage.setItem('lifevault_budgets', JSON.stringify(updated));
+  };
+
+  const addBudget = (budget: Budget) => {
+    const updated = [...budgets, budget];
+    setBudgets(updated);
+    localStorage.setItem('lifevault_budgets', JSON.stringify(updated));
+  };
+
+  const addExpense = (expense: Expense) => {
+    const updated = [expense, ...expenses];
+    setExpenses(updated);
+    localStorage.setItem('lifevault_expenses', JSON.stringify(updated));
+  };
+
+  const updateExpense = (id: string, updates: Partial<Expense>) => {
+    const updated = expenses.map(e => e.id === id ? { ...e, ...updates } : e);
+    setExpenses(updated);
+    localStorage.setItem('lifevault_expenses', JSON.stringify(updated));
+  };
+
+  const addGoal = (goal: SavingsGoal) => {
+    const updated = [...goals, goal];
+    setGoals(updated);
+    localStorage.setItem('lifevault_goals', JSON.stringify(updated));
+  };
+
+  const updateGoal = (id: string, updates: Partial<SavingsGoal>) => {
+    const updated = goals.map(g => g.id === id ? { ...g, ...updates } : g);
+    setGoals(updated);
+    localStorage.setItem('lifevault_goals', JSON.stringify(updated));
+  };
+
+  const addCategory = (category: Category) => {
+    const updated = [...categories, category];
+    setCategories(updated);
+    localStorage.setItem('lifevault_categories', JSON.stringify(updated));
   };
 
   const handleSetPremium = (val: boolean) => {
@@ -183,8 +294,9 @@ export const PlannerProvider: React.FC<{ children: ReactNode }> = ({ children })
 
   return (
     <PlannerContext.Provider value={{ 
-      events, tasks, budgets, isPremium,
-      addEvent, updateEvent, addTask, toggleTask, togglePaid, updateBudget,
+      events, tasks, budgets, expenses, goals, categories, isPremium,
+      addEvent, updateEvent, addTask, toggleTask, togglePaid, updateBudget, addBudget,
+      addExpense, updateExpense, addGoal, updateGoal, addCategory,
       setPremium: handleSetPremium,
       respondToInvite,
       sharedCalendars,
