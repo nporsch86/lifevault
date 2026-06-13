@@ -12,6 +12,7 @@ import Links from './pages/Links';
 import Templates from './pages/Templates';
 import Settings from './pages/Settings';
 import PrivateCalendar from './pages/PrivateCalendar';
+import SharedEventView from './pages/SharedEventView';
 
 function App() {
   return (
@@ -19,6 +20,7 @@ function App() {
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Landing />} />
+          <Route path="/shared/event/:uuid" element={<SharedEventView />} />
           <Route path="/app" element={<AppLayout />}>
             <Route index element={<DailyView />} />
             <Route path="weekly" element={<WeeklyView />} />

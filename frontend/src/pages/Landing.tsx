@@ -154,8 +154,8 @@ export default function Landing() {
           <div className="grid md:grid-cols-3 gap-6">
             {[
               { name: "Free", price: "$0", period: "forever", features: ["Daily & Weekly planner", "Basic to-do lists", "Basic expense tracking", "Canvas notes (basic)"], cta: "Get Started", popular: false },
-              { name: "Premium", price: "$12.99", period: "/month", features: ["Everything in Free", "Calendar sync (all 3)", "Confidential calendar", "AI meeting summaries", "Receipt scanning", "Budget planning", "Monthly & Annual views", "Cloud backup"], cta: "Upgrade", popular: true },
-              { name: "Lifetime", price: "$249", period: "one-time", features: ["All Premium features", "No recurring charges", "Priority support", "Early access to new features", "Lifetime updates"], cta: "Get Lifetime", popular: false },
+              { name: "Premium", price: "$14.99", period: "/month", features: ["Everything in Free", "Calendar sync (all 3)", "Confidential calendar", "AI meeting summaries", "Receipt scanning & taxes", "Budget planning", "Calendar sharing & invites", "Collaborative notes & tasks", "Voice input & travel time", "Monthly & Annual views", "Cloud backup"], cta: "Upgrade", popular: true },
+              { name: "Lifetime", price: "$330", period: "one-time", features: ["All Premium features", "No recurring charges", "Priority support", "Early access to new features", "Lifetime updates"], cta: "Get Lifetime", popular: false },
             ].map((p, i) => (
               <div key={i} className={`rounded-2xl p-8 ${p.popular ? 'bg-blue-600 border-2 border-blue-400 relative' : 'bg-[#16191e] border border-slate-800'}`}>
                 {p.popular && <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-blue-400 text-blue-900 text-xs font-black px-4 py-1 rounded-full">MOST POPULAR</div>}

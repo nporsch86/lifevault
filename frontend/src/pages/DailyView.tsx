@@ -1,4 +1,4 @@
-import { Plus, MoreVertical, CheckCircle2, Circle, Clock, CheckSquare, Wallet, FileText, Check, DollarSign, AlertCircle, Video, Car, Share2, Users, X } from 'lucide-react';
+import { Plus, MoreVertical, CheckCircle2, Circle, Clock, CheckSquare, Wallet, FileText, Check, DollarSign, AlertCircle, Video, Car, Share2, Users, X, MapPin, ExternalLink } from 'lucide-react';
 import React, { useState, useEffect } from 'react';
 import { usePlanner } from '../store/PlannerContext';
 import type { PlannerTask } from '../store/PlannerContext';
@@ -84,6 +84,7 @@ export default function DailyView() {
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [sharingEventId, setSharingEventId] = useState<string | null>(null);
   const [newInvitee, setNewInvitee] = useState('');
+  const [inlineEvent, setInlineEvent] = useState<{ hour: number; title: string } | null>(null);
 
   const todayTasks = tasks.filter(t => t.date === todayDateStr);
   const todayEvents = events.filter(e => e.date === todayDateStr);
@@ -100,6 +101,26 @@ export default function DailyView() {
       category: 'Work',
     });
     setNewTaskTitle('');
+  };
+
+  const handleSlotClick = (hour: number) => {
+    if (inlineEvent) {
+      saveInlineEvent();
+    }
+    setInlineEvent({ hour, title: '' });
+  };
+
+  const saveInlineEvent = () => {
+    if (inlineEvent && inlineEvent.title.trim()) {
+      addEvent({
+        id: Math.random().toString(36).substr(2, 9),
+        title: inlineEvent.title,
+        date: todayDateStr,
+        startTime: `${inlineEvent.hour.toString().padStart(2, '0')}:00`,
+        category: 'Work',
+      });
+    }
+    setInlineEvent(null);
   };
 
   const startEditing = (task: PlannerTask) => {
@@ -137,9 +158,9 @@ export default function DailyView() {
   const addInviteeToSharingEvent = () => {
     if (newInvitee && sharingEventId) {
       const event = events.find(e => e.id === sharingEventId);
-      if (event && !event.invitees?.includes(newInvitee)) {
+      if (event && !event.guests?.some(g => g.email === newInvitee)) {
         updateEvent(sharingEventId, { 
-          invitees: [...(event.invitees || []), newInvitee] 
+          guests: [...(event.guests || []), { email: newInvitee, status: 'pending' }] 
         });
         setNewInvitee('');
       }
@@ -151,7 +172,7 @@ export default function DailyView() {
       const event = events.find(e => e.id === sharingEventId);
       if (event) {
         updateEvent(sharingEventId, { 
-          invitees: event.invitees?.filter(i => i !== email) 
+          guests: event.guests?.filter(g => g.email !== email) 
         });
       }
     }
@@ -213,7 +234,30 @@ export default function DailyView() {
                   <div className="w-20 pr-6 py-2 text-right text-[10px] font-black text-slate-600 select-none tracking-tighter">
                     {hour.label}
                   </div>
-                  <div className="flex-1 py-1 group-hover:bg-slate-800/30 transition-colors relative">
+                  <div 
+                    className="flex-1 py-1 group-hover:bg-slate-800/30 transition-colors relative cursor-pointer"
+                    onClick={() => handleSlotClick(hour.value)}
+                  >
+                    {inlineEvent?.hour === hour.value && (
+                      <div 
+                        className="absolute inset-x-2 top-1 bottom-1 bg-blue-600/20 border border-blue-500 rounded-2xl p-4 z-30 animate-in zoom-in-95 duration-200"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <input
+                          autoFocus
+                          type="text"
+                          placeholder="Quick add event..."
+                          className="w-full bg-transparent border-none focus:ring-0 text-sm font-black text-slate-100 placeholder:text-slate-500"
+                          value={inlineEvent.title}
+                          onChange={(e) => setInlineEvent({ ...inlineEvent, title: e.target.value })}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') saveInlineEvent();
+                            if (e.key === 'Escape') setInlineEvent(null);
+                          }}
+                          onBlur={saveInlineEvent}
+                        />
+                      </div>
+                    )}
                     {todayEvents
                       .filter(e => {
                         if (e.startTime) return parseInt(e.startTime.split(':')[0]) === hour.value;
@@ -237,6 +281,7 @@ export default function DailyView() {
                             {travelTime > 0 && (
                               <div 
                                 className="absolute left-4 right-10 rounded-xl border border-dashed border-slate-600 bg-slate-800/40 flex items-center px-4 z-10"
+                                onClick={(e) => e.stopPropagation()}
                                 style={{ 
                                   top: `${((startMin - travelTime) / 60) * 100}%`, 
                                   height: `${(travelTime / 60) * 64 - 2}px`,
@@ -251,6 +296,7 @@ export default function DailyView() {
                             )}
                             <div 
                               className={`absolute left-2 right-6 rounded-2xl border ${billStyle} p-4 shadow-xl shadow-black/20 z-20 cursor-pointer hover:scale-[1.01] transition-all flex justify-between items-start`}
+                              onClick={(e) => e.stopPropagation()}
                               style={{ 
                                 top: `${(startMin / 60) * 100}%`, 
                                 height: `${(duration / 60) * 64 - 4}px`,
@@ -265,6 +311,25 @@ export default function DailyView() {
                               <p className="text-[10px] font-bold opacity-60 mt-0.5 uppercase tracking-widest">
                                 {isBill ? `Amount: ${event.amount}` : `${event.startTime} • ${duration} MIN`}
                               </p>
+                              {event.location && (
+                                <div className="mt-2 flex items-start space-x-2">
+                                  <MapPin className="w-3 h-3 text-slate-400 mt-0.5" />
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-[10px] font-bold text-slate-300 leading-tight">{event.location}</p>
+                                    {event.mapsLink && (
+                                      <a 
+                                        href={event.mapsLink} 
+                                        target="_blank" 
+                                        rel="noopener noreferrer"
+                                        onClick={(e) => e.stopPropagation()}
+                                        className="text-[8px] font-black text-blue-400 uppercase tracking-widest hover:text-blue-300 flex items-center mt-1"
+                                      >
+                                        Open Maps <ExternalLink className="w-2 h-2 ml-1" />
+                                      </a>
+                                    )}
+                                  </div>
+                                </div>
+                              )}
                               {event.meetingLink && (
                                 <a 
                                   href={event.meetingLink} 
@@ -278,21 +343,26 @@ export default function DailyView() {
                                 </a>
                               )}
 
-                              {event.invitees && event.invitees.length > 0 && (
+                              {event.guests && event.guests.length > 0 && (
                                 <div className="mt-3 flex items-center space-x-2">
                                   <div className="flex -space-x-2">
-                                    {event.invitees.slice(0, 3).map((email, i) => (
-                                      <div key={i} className="w-5 h-5 rounded-full bg-slate-700 border-2 border-slate-800 flex items-center justify-center text-[8px] font-black uppercase text-blue-400">
-                                        {email[0]}
+                                    {event.guests.slice(0, 3).map((guest, i) => (
+                                      <div key={i} className="w-5 h-5 rounded-full bg-slate-700 border-2 border-slate-800 flex items-center justify-center text-[8px] font-black uppercase text-blue-400 relative">
+                                        {guest.email[0]}
+                                        <div className={`absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full border border-slate-800 ${
+                                          guest.status === 'accepted' ? 'bg-emerald-500' :
+                                          guest.status === 'declined' ? 'bg-rose-500' :
+                                          'bg-slate-500'
+                                        }`}></div>
                                       </div>
                                     ))}
-                                    {event.invitees.length > 3 && (
+                                    {event.guests.length > 3 && (
                                       <div className="w-5 h-5 rounded-full bg-slate-700 border-2 border-slate-800 flex items-center justify-center text-[8px] font-black text-slate-300">
-                                        +{event.invitees.length - 3}
+                                        +{event.guests.length - 3}
                                       </div>
                                     )}
                                   </div>
-                                  <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">{event.invitees.length} GUESTS</span>
+                                  <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">{event.guests.length} GUESTS</span>
                                   <button 
                                     onClick={(e) => { e.stopPropagation(); setSharingEventId(event.id); setIsShareModalOpen(true); }}
                                     className="p-1 hover:bg-white/10 rounded text-slate-400 hover:text-blue-400 transition-colors"
@@ -302,7 +372,7 @@ export default function DailyView() {
                                 </div>
                               )}
 
-                              {!event.invitees && (
+                              {!event.guests && (
                                 <button 
                                   onClick={(e) => { e.stopPropagation(); setSharingEventId(event.id); setIsShareModalOpen(true); }}
                                   className="mt-3 flex items-center space-x-2 text-[9px] font-black uppercase text-slate-500 hover:text-blue-400 transition-colors"
@@ -523,23 +593,31 @@ export default function DailyView() {
                 </div>
                 
                 <div className="space-y-2 max-h-48 overflow-y-auto custom-scrollbar">
-                  {events.find(e => e.id === sharingEventId)?.invitees?.map(email => (
-                    <div key={email} className="bg-slate-800/50 border border-slate-700/30 rounded-xl px-4 py-3 flex items-center justify-between group">
+                  {events.find(e => e.id === sharingEventId)?.guests?.map(guest => (
+                    <div key={guest.email} className="bg-slate-800/50 border border-slate-700/30 rounded-xl px-4 py-3 flex items-center justify-between group">
                       <div className="flex items-center space-x-3">
-                        <div className="w-8 h-8 rounded-full bg-blue-600/10 flex items-center justify-center text-[10px] font-black text-blue-500 uppercase">
-                          {email[0]}
+                        <div className="w-8 h-8 rounded-full bg-blue-600/10 flex items-center justify-center text-[10px] font-black text-blue-500 uppercase relative">
+                          {guest.email[0]}
+                          <div className={`absolute -bottom-1 -right-1 w-3 h-3 rounded-full border-2 border-[#16191e] ${
+                            guest.status === 'accepted' ? 'bg-emerald-500' :
+                            guest.status === 'declined' ? 'bg-rose-500' :
+                            'bg-slate-500'
+                          }`}></div>
                         </div>
-                        <span className="text-xs font-bold text-slate-300">{email}</span>
+                        <div className="flex flex-col">
+                          <span className="text-xs font-bold text-slate-300">{guest.email}</span>
+                          <span className="text-[8px] font-black uppercase text-slate-500 tracking-widest">{guest.status}</span>
+                        </div>
                       </div>
                       <button 
-                        onClick={() => removeInviteeFromSharingEvent(email)}
+                        onClick={() => removeInviteeFromSharingEvent(guest.email)}
                         className="text-slate-600 hover:text-rose-500 transition-colors opacity-0 group-hover:opacity-100"
                       >
                         <X className="w-4 h-4" />
                       </button>
                     </div>
                   ))}
-                  {(!events.find(e => e.id === sharingEventId)?.invitees || events.find(e => e.id === sharingEventId)?.invitees?.length === 0) && (
+                  {(!events.find(e => e.id === sharingEventId)?.guests || events.find(e => e.id === sharingEventId)?.guests?.length === 0) && (
                     <p className="text-[10px] font-bold text-slate-600 text-center py-4 uppercase tracking-widest">No guests invited yet</p>
                   )}
                 </div>

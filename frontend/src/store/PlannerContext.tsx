@@ -1,6 +1,11 @@
 import React, { createContext, useContext, useState } from 'react';
 import type { ReactNode } from 'react';
 
+export interface Guest {
+  email: string;
+  status: 'pending' | 'accepted' | 'declined';
+}
+
 export interface PlannerEvent {
   id: string;
   title: string;
@@ -13,7 +18,9 @@ export interface PlannerEvent {
   isPaid?: boolean;
   meetingLink?: string;
   travelTime?: number; // duration in minutes
-  invitees?: string[];
+  location?: string;
+  mapsLink?: string;
+  guests?: Guest[];
   inviteStatus?: 'accepted' | 'declined' | 'pending';
 }
 
@@ -103,7 +110,11 @@ export const PlannerProvider: React.FC<{ children: ReactNode }> = ({ children })
       endTime: '14:30', 
       category: 'Work', 
       inviteStatus: 'pending',
-      invitees: ['jane@example.com', 'mark@example.com', 'jamie@email.com']
+      guests: [
+        { email: 'jane@example.com', status: 'accepted' },
+        { email: 'mark@example.com', status: 'pending' },
+        { email: 'jamie@email.com', status: 'pending' }
+      ]
     },
   ]);
 
@@ -114,6 +125,14 @@ export const PlannerProvider: React.FC<{ children: ReactNode }> = ({ children })
     { id: 't4', title: 'Prepare slides', date: '2025-10-20', completed: false, priority: 'high', category: 'Work' },
     { id: 't5', title: 'Book flight', date: '2025-10-20', completed: true, priority: 'medium', category: 'Personal' },
     { id: 't6', title: 'Call mom', date: '2025-10-29', completed: false, priority: 'low', category: 'Personal' },
+  ]);
+
+  const [sharedCalendars, setSharedCalendars] = useState<SharedCalendar[]>([
+    { id: 'sc1', name: 'Work Project', owner: 'sarah@example.com', permission: 'view', status: 'pending' },
+  ]);
+
+  const [myShares, setMyShares] = useState<SharedCalendar[]>([
+    { id: 'ms1', name: 'Personal Planner', owner: 'jamie@email.com', permission: 'edit', status: 'accepted' },
   ]);
 
   const addEvent = (event: PlannerEvent) => setEvents([...events, event]);
@@ -143,17 +162,36 @@ export const PlannerProvider: React.FC<{ children: ReactNode }> = ({ children })
     setEvents(events.map(e => e.id === eventId ? { ...e, inviteStatus: status } : e));
   };
 
+  const shareCalendar = (email: string, permission: 'view' | 'edit') => {
+    const newShare: SharedCalendar = {
+      id: Math.random().toString(36).substr(2, 9),
+      name: 'Main Calendar',
+      owner: email,
+      permission,
+      status: 'pending'
+    };
+    setMyShares([...myShares, newShare]);
+  };
+
+  const removeShare = (id: string) => {
+    setMyShares(myShares.filter(s => s.id !== id));
+  };
+
+  const respondToSharedCalendar = (id: string, status: 'accepted' | 'declined') => {
+    setSharedCalendars(sharedCalendars.map(s => s.id === id ? { ...s, status } : s));
+  };
+
   return (
     <PlannerContext.Provider value={{ 
       events, tasks, budgets, isPremium,
-            addEvent, updateEvent, addTask, toggleTask, togglePaid, updateBudget,
-            setPremium: handleSetPremium,
-            respondToInvite,
-            sharedCalendars: [],
-            myShares: [],
-            shareCalendar: () => {},
-            removeShare: () => {},
-            respondToSharedCalendar: () => {}
+      addEvent, updateEvent, addTask, toggleTask, togglePaid, updateBudget,
+      setPremium: handleSetPremium,
+      respondToInvite,
+      sharedCalendars,
+      myShares,
+      shareCalendar,
+      removeShare,
+      respondToSharedCalendar
     }}>
       {children}
     </PlannerContext.Provider>

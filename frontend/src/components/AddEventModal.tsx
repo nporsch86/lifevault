@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { X, Calendar, Clock, Tag, Link as LinkIcon, Video, ArrowRight, Car, Users, Plus as PlusIcon } from 'lucide-react';
+import { X, Calendar, Clock, Tag, Link as LinkIcon, Video, ArrowRight, Users, Plus as PlusIcon, Check, Clock as ClockIcon, MapPin } from 'lucide-react';
 import { usePlanner } from '../store/PlannerContext';
-import type { PlannerEvent } from '../store/PlannerContext';
+import type { PlannerEvent, Guest } from '../store/PlannerContext';
 
 interface AddEventModalProps {
   isOpen: boolean;
@@ -20,7 +20,8 @@ export default function AddEventModal({ isOpen, onClose, initialDate }: AddEvent
     category: 'Work',
     meetingLink: '',
     travelTime: 0,
-    invitees: [],
+    location: '',
+    guests: [],
   });
   const [newInvitee, setNewInvitee] = useState('');
 
@@ -38,7 +39,9 @@ export default function AddEventModal({ isOpen, onClose, initialDate }: AddEvent
       category: event.category as any || 'Work',
       meetingLink: event.meetingLink,
       travelTime: event.travelTime,
-      invitees: event.invitees,
+      location: event.location,
+      mapsLink: event.location ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(event.location)}` : undefined,
+      guests: event.guests,
       inviteStatus: 'accepted',
     } as PlannerEvent);
 
@@ -50,20 +53,22 @@ export default function AddEventModal({ isOpen, onClose, initialDate }: AddEvent
       category: 'Work',
       meetingLink: '',
       travelTime: 0,
-      invitees: [],
+      location: '',
+      guests: [],
     });
     setNewInvitee('');
   };
 
   const addInvitee = () => {
-    if (newInvitee && !event.invitees?.includes(newInvitee)) {
-      setEvent({ ...event, invitees: [...(event.invitees || []), newInvitee] });
+    if (newInvitee && !event.guests?.some(g => g.email === newInvitee)) {
+      const newGuest: Guest = { email: newInvitee, status: 'pending' };
+      setEvent({ ...event, guests: [...(event.guests || []), newGuest] });
       setNewInvitee('');
     }
   };
 
   const removeInvitee = (email: string) => {
-    setEvent({ ...event, invitees: event.invitees?.filter(i => i !== email) });
+    setEvent({ ...event, guests: event.guests?.filter(g => g.email !== email) });
   };
 
   const quickAddMeet = () => {
@@ -184,19 +189,20 @@ export default function AddEventModal({ isOpen, onClose, initialDate }: AddEvent
           </div>
 
           <div>
-            <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mb-3 block">Travel Time (Minutes)</label>
+            <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mb-3 block">Destination Address</label>
             <div className="relative">
-              <Car className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+              <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
               <input 
-                type="number" 
-                placeholder="0"
-                min="0"
-                step="5"
-                value={event.travelTime}
+                type="text" 
+                placeholder="e.g. 123 Main St, New York"
+                value={event.location}
                 className="w-full bg-slate-800 border border-slate-700/50 rounded-2xl py-4 pl-12 pr-4 text-slate-100 font-bold focus:outline-none focus:ring-2 focus:ring-blue-600/50 transition-all text-sm"
-                onChange={(e) => setEvent({...event, travelTime: parseInt(e.target.value) || 0})}
+                onChange={(e) => setEvent({...event, location: e.target.value})}
               />
             </div>
+            <p className="mt-2 text-[9px] font-bold text-slate-600 uppercase tracking-widest px-2">
+              Directions link will be generated automatically
+            </p>
           </div>
 
           <div>
@@ -223,12 +229,17 @@ export default function AddEventModal({ isOpen, onClose, initialDate }: AddEvent
             </div>
             
             <div className="flex flex-wrap gap-2 max-h-24 overflow-y-auto custom-scrollbar">
-              {event.invitees?.map(email => (
-                <div key={email} className="bg-blue-600/10 border border-blue-600/20 rounded-full px-4 py-1.5 flex items-center space-x-2 group">
-                  <span className="text-[10px] font-bold text-blue-400">{email}</span>
+              {event.guests?.map(guest => (
+                <div key={guest.email} className="bg-blue-600/10 border border-blue-600/20 rounded-full px-4 py-1.5 flex items-center space-x-2 group">
+                  <div className="flex items-center space-x-1">
+                    {guest.status === 'accepted' ? <Check className="w-3 h-3 text-emerald-500" /> : 
+                     guest.status === 'declined' ? <X className="w-3 h-3 text-rose-500" /> :
+                     <ClockIcon className="w-3 h-3 text-slate-500" />}
+                    <span className="text-[10px] font-bold text-blue-400">{guest.email}</span>
+                  </div>
                   <button 
                     type="button"
-                    onClick={() => removeInvitee(email)}
+                    onClick={() => removeInvitee(guest.email)}
                     className="text-blue-600/50 hover:text-blue-400 transition-colors"
                   >
                     <X className="w-3 h-3" />
