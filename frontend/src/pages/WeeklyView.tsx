@@ -2,24 +2,29 @@ import { ChevronLeft, ChevronRight, Plus, CheckSquare, Clock, Wallet, FileText, 
 import { useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import { usePlanner } from '../store/PlannerContext';
+import type { PlannerEvent } from '../store/PlannerContext';
 import AddEventModal from '../components/AddEventModal';
 
 const DAYS = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
 
-const categoryColors: Record<string, string> = {
-  Work: 'bg-blue-600/20 border-blue-600/40 text-blue-200',
-  Personal: 'bg-emerald-600/20 border-emerald-600/40 text-emerald-200',
-  Important: 'bg-rose-600/20 border-rose-600/40 text-rose-200',
-  Confidential: 'bg-purple-600/20 border-purple-600/40 text-purple-200',
-  Bill: 'bg-amber-500/20 border-amber-500/40 text-amber-200',
-  Medical: 'bg-teal-600/20 border-teal-600/40 text-teal-200',
-  Family: 'bg-indigo-600/20 border-indigo-600/40 text-indigo-200',
-  Health: 'bg-cyan-600/20 border-cyan-600/40 text-cyan-200',
-};
-
 export default function WeeklyView() {
   const navigate = useNavigate();
-  const { events, tasks, togglePaid } = usePlanner();
+  const { events, tasks, togglePaid, expenses, allDayEvents } = usePlanner();
+
+  const getCategoryColorClass = (catName: string) => {
+    const standard: Record<string, string> = {
+      Work: 'bg-blue-600/20 border-blue-600/40 text-blue-200',
+      Personal: 'bg-emerald-600/20 border-emerald-600/40 text-emerald-200',
+      Important: 'bg-rose-600/20 border-rose-600/40 text-rose-200',
+      Confidential: 'bg-purple-600/20 border-purple-600/40 text-purple-200',
+      Bill: 'bg-amber-500/20 border-amber-500/40 text-amber-200',
+      Medical: 'bg-teal-600/20 border-teal-600/40 text-teal-200',
+      Family: 'bg-indigo-600/20 border-indigo-600/40 text-indigo-200',
+      Health: 'bg-cyan-600/20 border-cyan-600/40 text-cyan-200',
+    };
+    if (standard[catName]) return standard[catName];
+    return 'bg-slate-800/40 border-slate-700/50 text-slate-300';
+  };
   
   // Mock current week for development: Oct 27 - Nov 02, 2025
   const todayDateStr = '2025-10-29';
@@ -103,6 +108,21 @@ export default function WeeklyView() {
           const dateInfo = weekDates[idx];
           const isToday = dateInfo.full === todayDateStr;
           const dayEvents = events.filter(e => e.date === dateInfo.full);
+          const dayAllDay = allDayEvents.filter(e => e.date === dateInfo.full);
+          
+          const billEvents: PlannerEvent[] = expenses
+            .filter(ex => ex.dueDate === dateInfo.full)
+            .map(ex => ({
+              id: `bill-${ex.id}`,
+              title: `${ex.note} Due`,
+              date: ex.date,
+              category: 'Bill',
+              amount: ex.amount,
+              isPaid: false,
+              startTime: '09:00',
+            }));
+
+          const dayGridEvents: PlannerEvent[] = [...dayEvents, ...billEvents];
           const dayStats = getDayStats(dateInfo.full);
 
           return (
@@ -120,10 +140,28 @@ export default function WeeklyView() {
                     ? 'bg-blue-600/[0.03] border-blue-600/20 hover:border-blue-600/40' 
                     : 'bg-slate-800/20 border-slate-800/50 hover:border-slate-700'
                   }`}
-              >
-                {/* Events dots/bars */}
-                <div className="space-y-2 flex-1 overflow-y-auto custom-scrollbar pr-1">
-                  {dayEvents.map(event => {
+                  >
+                  {/* All-Day Notes Bar */}
+                  {dayAllDay.length > 0 && (
+                  <div className="flex flex-col gap-1.5 mb-2 pb-2 border-b border-slate-800/50">
+                    {dayAllDay.map(note => (
+                      <div key={note.id} className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-1.5 flex items-center space-x-2 shadow-sm">
+                        <span className="text-[10px]">📌</span>
+                        <div className="flex-1 min-w-0">
+                          {note.handwrittenData ? (
+                            <img src={note.handwrittenData} alt="Handwritten" className="h-5 object-contain brightness-200 contrast-125" />
+                          ) : (
+                            <p className="text-[9px] font-black text-slate-100 truncate">{note.title}</p>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  )}
+
+                  {/* Events dots/bars */}
+
+                  {dayGridEvents.map(event => {
                     const isBill = event.category === 'Bill';
                     const billStatus = isBill ? getBillStatus(event.date, !!event.isPaid) : null;
                     const billStyle = isBill ? (
@@ -131,7 +169,7 @@ export default function WeeklyView() {
                       billStatus === 'overdue' ? 'bg-rose-600/20 border-rose-500/50 text-rose-200' :
                       billStatus === 'soon' ? 'bg-amber-500/40 border-amber-500/60 text-amber-50' :
                       'bg-slate-800/40 border-slate-700/50 text-slate-300'
-                    ) : categoryColors[event.category];
+                    ) : getCategoryColorClass(event.category);
 
                     return (
                       <div 
@@ -140,10 +178,15 @@ export default function WeeklyView() {
                       >
                         <div className="mb-0.5">
                           <div className="flex items-center justify-between">
-                            <p className="text-[11px] font-black leading-tight truncate mr-1">
+                            <div className="text-[11px] font-black leading-tight truncate mr-1 flex-1">
                               {isBill && <FileText className="w-2.5 h-2.5 inline mr-1 mb-0.5" />}
-                              {event.title}
-                            </p>
+                              {event.isHandwritten && event.handwrittenData ? (
+                                <img src={event.handwrittenData} alt="Handwritten" className="h-6 object-contain brightness-200 contrast-125" />
+                              ) : (
+                                event.title
+                              )}
+                            </div>
+
                             {isBill && (
                               <button 
                                 onClick={(e) => { e.stopPropagation(); togglePaid(event.id); }}
@@ -198,7 +241,7 @@ export default function WeeklyView() {
                     );
                   })}
                   
-                  {dayEvents.length === 0 && (
+                  {allDayEvents.length === 0 && (
                     <div className="h-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                       <Plus className="w-6 h-6 text-slate-700" />
                     </div>
@@ -233,11 +276,10 @@ export default function WeeklyView() {
                 >
                   <Plus className="w-3.5 h-3.5" />
                 </button>
-              </div>
-            </div>
-          );
-        })}
-      </div>
+                </div>
+                );
+                })}
+                </div>
 
       <AddEventModal 
         isOpen={isEventModalOpen} 

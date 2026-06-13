@@ -12,7 +12,7 @@ export interface PlannerEvent {
   date: string; // ISO date YYYY-MM-DD
   startTime?: string;
   endTime?: string;
-  category: 'Work' | 'Personal' | 'Important' | 'Confidential' | 'Bill' | 'Medical' | 'Family' | 'Health';
+  category: string;
   description?: string;
   amount?: number;
   isPaid?: boolean;
@@ -22,6 +22,8 @@ export interface PlannerEvent {
   mapsLink?: string;
   guests?: Guest[];
   inviteStatus?: 'accepted' | 'declined' | 'pending';
+  isHandwritten?: boolean;
+  handwrittenData?: string; // base64 image data
 }
 
 export interface PlannerTask {
@@ -90,7 +92,9 @@ interface PlannerContextType {
   isPremium: boolean;
   sharedCalendars: SharedCalendar[];
   myShares: SharedCalendar[];
+  allDayEvents: PlannerEvent[];
   addEvent: (event: PlannerEvent) => void;
+  addAllDayEvent: (event: PlannerEvent) => void;
   updateEvent: (id: string, updates: Partial<PlannerEvent>) => void;
   addTask: (task: PlannerTask) => void;
   toggleTask: (id: string) => void;
@@ -210,7 +214,18 @@ export const PlannerProvider: React.FC<{ children: ReactNode }> = ({ children })
     { id: 'ms1', name: 'Personal Planner', owner: 'jamie@email.com', permission: 'edit', status: 'accepted' },
   ]);
 
+  const [allDayEvents, setAllDayEvents] = useState<PlannerEvent[]>(() => {
+    const saved = localStorage.getItem('lifevault_allday_events');
+    return saved ? JSON.parse(saved) : [];
+  });
+
   const addEvent = (event: PlannerEvent) => setEvents([...events, event]);
+  
+  const addAllDayEvent = (event: PlannerEvent) => {
+    const updated = [...allDayEvents, event];
+    setAllDayEvents(updated);
+    localStorage.setItem('lifevault_allday_events', JSON.stringify(updated));
+  };
   const updateEvent = (id: string, updates: Partial<PlannerEvent>) => {
     setEvents(events.map(e => e.id === id ? { ...e, ...updates } : e));
   };
@@ -295,7 +310,8 @@ export const PlannerProvider: React.FC<{ children: ReactNode }> = ({ children })
   return (
     <PlannerContext.Provider value={{ 
       events, tasks, budgets, expenses, goals, categories, isPremium,
-      addEvent, updateEvent, addTask, toggleTask, togglePaid, updateBudget, addBudget,
+      allDayEvents,
+      addEvent, addAllDayEvent, updateEvent, addTask, toggleTask, togglePaid, updateBudget, addBudget,
       addExpense, updateExpense, addGoal, updateGoal, addCategory,
       setPremium: handleSetPremium,
       respondToInvite,

@@ -2,37 +2,50 @@ import { ChevronLeft, ChevronRight, CheckSquare, Plus, FileText, Video, Car, Use
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { usePlanner } from '../store/PlannerContext';
+import type { PlannerEvent } from '../store/PlannerContext';
 import AddEventModal from '../components/AddEventModal';
+import HandwritingOverlay from '../components/HandwritingOverlay';
 
 const DAYS_SHORT = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
-const categoryColors: Record<string, string> = {
-  Work: 'bg-blue-600 text-blue-50 border-blue-500',
-  Personal: 'bg-emerald-600 text-emerald-50 border-emerald-500',
-  Important: 'bg-rose-600 text-rose-50 border-rose-500',
-  Confidential: 'bg-purple-600 text-purple-50 border-purple-500',
-  Bill: 'bg-amber-500 text-amber-950 border-amber-400',
-  Medical: 'bg-teal-600 text-teal-50 border-teal-500',
-  Family: 'bg-indigo-600 text-indigo-50 border-indigo-500',
-  Health: 'bg-cyan-600 text-cyan-50 border-cyan-500',
-};
-
-const categoryDots: Record<string, string> = {
-  Work: 'bg-blue-500',
-  Personal: 'bg-emerald-500',
-  Important: 'bg-rose-500',
-  Confidential: 'bg-purple-500',
-  Bill: 'bg-amber-500',
-  Medical: 'bg-teal-500',
-  Family: 'bg-indigo-500',
-  Health: 'bg-cyan-500',
-};
-
 export default function MonthlyView() {
   const navigate = useNavigate();
-  const { events, tasks } = usePlanner();
+  const { events, tasks, expenses, categories, addEvent, addAllDayEvent, allDayEvents } = usePlanner();
+
+  const getCategoryColorClass = (catName: string) => {
+    // const cat = categories.find(c => c.name === catName);
+    const standard: Record<string, string> = {
+      Work: 'bg-blue-600 text-blue-50 border-blue-500',
+      Personal: 'bg-emerald-600 text-emerald-50 border-emerald-500',
+      Important: 'bg-rose-600 text-rose-50 border-rose-500',
+      Confidential: 'bg-purple-600 text-purple-50 border-purple-500',
+      Bill: 'bg-amber-500 text-amber-950 border-amber-400',
+      Medical: 'bg-teal-600 text-teal-50 border-teal-500',
+      Family: 'bg-indigo-600 text-indigo-50 border-indigo-500',
+      Health: 'bg-cyan-600 text-cyan-50 border-cyan-500',
+    };
+    if (standard[catName]) return standard[catName];
+    return 'bg-slate-700 text-slate-300 border-slate-600';
+  };
+
+  const getCategoryDotClass = (catName: string) => {
+    // const cat = categories.find(c => c.name === catName);
+    const standard: Record<string, string> = {
+      Work: 'bg-blue-500',
+      Personal: 'bg-emerald-500',
+      Important: 'bg-rose-500',
+      Confidential: 'bg-purple-500',
+      Bill: 'bg-amber-500',
+      Medical: 'bg-teal-500',
+      Family: 'bg-indigo-500',
+      Health: 'bg-cyan-500',
+    };
+    if (standard[catName]) return standard[catName];
+    return 'bg-slate-500';
+  };
   const [currentMonth] = useState('October 2025');
   const [isEventModalOpen, setIsEventModalOpen] = useState(false);
+  const [handwritingDate, setHandwritingDate] = useState<string | null>(null);
   const selectedDate = '2025-10-29';
   
   const daysInMonth = 31;
@@ -41,7 +54,21 @@ export default function MonthlyView() {
   const todayDateStr = '2025-10-29';
   const today = new Date(todayDateStr);
 
-  const upcomingEvents = events
+  const billEventsList: PlannerEvent[] = expenses
+    .filter(ex => ex.dueDate)
+    .map(ex => ({
+      id: `bill-${ex.id}`,
+      title: `${ex.note} Due`,
+      date: ex.dueDate!,
+      category: 'Bill',
+      amount: ex.amount,
+      isPaid: false,
+      startTime: '09:00',
+    }));
+
+  const allEvents: PlannerEvent[] = [...events, ...billEventsList, ...allDayEvents];
+
+  const upcomingEvents = allEvents
     .filter(e => e.date >= todayDateStr)
     .sort((a, b) => a.date.localeCompare(b.date));
 
@@ -96,36 +123,36 @@ export default function MonthlyView() {
               <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Next Up</h4>
               {upcomingEvents.slice(0, 3).map(event => (
                 <div key={event.id} className="flex items-center space-x-3 group cursor-pointer">
-                  <div className={`w-1.5 h-6 rounded-full ${categoryDots[event.category]}`}></div>
+                  <div className={`w-1.5 h-6 rounded-full ${getCategoryDotClass(event.category)}`}></div>
                   <div className="min-w-0">
                     <p className="text-slate-200 font-bold text-sm truncate group-hover:text-blue-400 transition-colors">{event.title}</p>
                     <p className="text-[10px] font-bold text-slate-500 uppercase">
-                      {event.category === 'Bill' ? `$${event.amount}` : event.date.split('-').slice(1).join('/')}
+                      {event.category === 'Bill' ? `${event.amount}` : event.date.split('-').slice(1).join('/')}
                     </p>
                   </div>
                 </div>
               ))}
             </div>
-          </div>
-        </div>
+            </div>
+            </div>
 
-        <div className="bg-[#1a1a2e] rounded-3xl p-6 border border-slate-800/50 shadow-xl flex-1 flex flex-col justify-between">
-          <div className="space-y-6">
+            <div className="bg-[#1a1a2e] rounded-3xl p-6 border border-slate-800/50 shadow-xl flex-1 flex flex-col justify-between">
+            <div className="space-y-6">
             <h3 className="text-sm font-black text-slate-400 uppercase tracking-widest">
               Categories
             </h3>
             <div className="space-y-3">
-               {Object.entries(categoryDots).map(([name, color]) => (
-                 <div key={name} className="flex items-center justify-between group cursor-pointer">
+               {categories.map(cat => (
+                 <div key={cat.id} className="flex items-center justify-between group cursor-pointer">
                    <div className="flex items-center space-x-3">
-                     <div className={`w-2.5 h-2.5 rounded-full ${color} shadow-lg shadow-black/20`}></div>
-                     <span className="text-xs font-bold text-slate-300 group-hover:text-slate-100 transition-colors">{name}</span>
+                     <div className={`w-2.5 h-2.5 rounded-full ${getCategoryDotClass(cat.name)} shadow-lg shadow-black/20`}></div>
+                     <span className="text-xs font-bold text-slate-300 group-hover:text-slate-100 transition-colors">{cat.icon} {cat.name}</span>
                    </div>
-                   <span className="text-[10px] font-bold text-slate-600">{events.filter(e => e.category === name).length}</span>
+                   <span className="text-[10px] font-bold text-slate-600">{allEvents.filter(e => e.category === cat.name).length}</span>
                  </div>
                ))}
             </div>
-          </div>
+            </div>
 
           <div className="pt-8 border-t border-slate-800/50">
              <div className="flex items-center justify-between mb-4">
@@ -193,7 +220,7 @@ export default function MonthlyView() {
               const isCurrentMonth = dayNumber > 0 && dayNumber <= daysInMonth;
               const dateStr = `2025-10-${dayNumber.toString().padStart(2, '0')}`;
               
-              const dayEvents = events.filter(e => e.date === dateStr);
+              const dayEvents = allEvents.filter(e => e.date === dateStr);
               const dayTasks = tasks.filter(t => t.date === dateStr);
               const hasHighPriority = dayTasks.some(t => t.priority === 'high' && !t.completed);
               const isToday = dateStr === todayDateStr;
@@ -208,13 +235,36 @@ export default function MonthlyView() {
                   )}
 
                   <div 
-                    onClick={() => isCurrentMonth && navigate('/')}
+                    onPointerDown={(e) => {
+                      if (e.pointerType === 'pen') {
+                        e.stopPropagation();
+                        setHandwritingDate(dateStr);
+                      } else {
+                        isCurrentMonth && navigate('/');
+                      }
+                    }}
                     className={`min-h-[140px] p-2 bg-[#1a1a2e]/40 hover:bg-slate-800/40 transition-all cursor-pointer group relative flex flex-col
                       ${!isCurrentMonth ? 'opacity-5 pointer-events-none' : ''}
                       ${isToday ? 'bg-blue-600/[0.05] ring-2 ring-blue-600/20 ring-inset' : ''}
                       ${hasHighPriority ? 'border-l-2 border-l-rose-500/50' : ''}
                     `}
                   >
+                    {handwritingDate === dateStr && (
+                      <HandwritingOverlay 
+                        onCancel={() => setHandwritingDate(null)}
+                        onCapture={(text, dataUrl) => {
+                          addAllDayEvent({
+                            id: Math.random().toString(36).substr(2, 9),
+                            title: text,
+                            date: dateStr,
+                            category: 'Personal',
+                            isHandwritten: true,
+                            handwrittenData: dataUrl,
+                          });
+                          setHandwritingDate(null);
+                        }}
+                      />
+                    )}
                     <div className="flex justify-between items-start mb-2">
                        <div className="flex flex-col">
                           <span className={`text-lg font-black transition-colors ${isToday ? 'text-blue-500 font-black' : 'text-slate-600 group-hover:text-slate-300'}`}>
@@ -239,16 +289,20 @@ export default function MonthlyView() {
                             billStatus === 'overdue' ? 'bg-rose-600 text-white border-rose-500 animate-pulse' :
                             billStatus === 'soon' ? 'bg-amber-500 text-amber-950 border-amber-400 font-black' :
                             'bg-slate-700 text-slate-300 border-slate-600'
-                          ) : categoryColors[event.category];
+                          ) : getCategoryColorClass(event.category);
 
                           return (
                             <div 
                               key={event.id} 
                               className={`px-2 py-0.5 rounded-md text-[9px] font-bold border-l-2 shadow-sm truncate transition-transform hover:scale-[1.02] flex items-center justify-between ${billStyle}`}
                             >
-                              <div className="flex items-center min-w-0">
+                              <div className="flex items-center min-w-0 flex-1">
                                 {isBill && <FileText className="w-2 h-2 mr-1 shrink-0" />}
-                                <span className="truncate">{event.title}</span>
+                                {event.isHandwritten && event.handwrittenData ? (
+                                  <img src={event.handwrittenData} alt="Handwritten" className="h-4 object-contain brightness-200 contrast-125" />
+                                ) : (
+                                  <span className="truncate">{event.title}</span>
+                                )}
                               </div>
                               <div className="flex items-center shrink-0 ml-1">
                                 {event.meetingLink && (
@@ -283,7 +337,7 @@ export default function MonthlyView() {
                           {dayEvents.slice(0, 2).map(event => (
                             <div 
                               key={event.id} 
-                              className={`px-2 py-0.5 rounded-md text-[9px] font-black border-l-2 shadow-sm truncate ${categoryColors[event.category]}`}
+                              className={`px-2 py-0.5 rounded-md text-[9px] font-black border-l-2 shadow-sm truncate ${getCategoryColorClass(event.category)}`}
                             >
                               {event.title}
                             </div>
@@ -297,7 +351,7 @@ export default function MonthlyView() {
                       {dayEvents.length >= 5 && (
                          <div className="flex gap-1 mt-1 justify-center">
                             {dayEvents.map(e => (
-                               <div key={e.id} className={`w-1 h-1 rounded-full ${categoryDots[e.category]}`}></div>
+                               <div key={e.id} className={`w-1 h-1 rounded-full ${getCategoryDotClass(e.category)}`}></div>
                             ))}
                          </div>
                       )}

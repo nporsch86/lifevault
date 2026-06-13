@@ -1,16 +1,7 @@
-import { Wallet, TrendingUp, TrendingDown, Filter, Repeat, MoreHorizontal, Camera, FileText, Tag, X, CheckCircle2, PieChart, AlertCircle, Edit3, ArrowRight, Target, Calendar, Clock } from 'lucide-react';
+import { Wallet, TrendingDown, Repeat, MoreHorizontal, Camera, FileText, Tag, X, CheckCircle2, PieChart, Edit3, ArrowRight, Target, Calendar, Clock } from 'lucide-react';
 import { useState, useRef } from 'react';
 import { usePlanner } from '../store/PlannerContext';
-import type { Budget, Expense, SavingsGoal } from '../store/PlannerContext';
-
-const categoryColors: Record<string, string> = {
-  Food: 'bg-orange-500',
-  Transport: 'bg-blue-500',
-  Shopping: 'bg-pink-500',
-  Bills: 'bg-purple-500',
-  Health: 'bg-red-500',
-  Other: 'bg-slate-500',
-};
+import type { Expense, SavingsGoal } from '../store/PlannerContext';
 
 export default function Expenses() {
   const { budgets, updateBudget, addBudget, expenses, addExpense, goals, addGoal, categories, addCategory } = usePlanner();
@@ -37,17 +28,11 @@ export default function Expenses() {
 
   const [selectedReceipt, setSelectedReceipt] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
-  const [editingBudget, setEditingBudget] = useState<Budget | null>(null);
   const [showBudgetModal, setShowBudgetModal] = useState(false);
   const [showGoalModal, setShowGoalModal] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
-
-  const getCategoryColor = (catName: string) => {
-    const cat = categories.find(c => c.name === catName);
-    return cat?.color || '#6B7280';
-  };
 
   const getCategoryIcon = (catName: string) => {
     const cat = categories.find(c => c.name === catName);
@@ -293,7 +278,7 @@ export default function Expenses() {
                   const isNearLimit = percent >= 80 && percent < 100;
                   const isOverLimit = percent >= 100;
                   const icon = getCategoryIcon(budget.category);
-                  const color = getCategoryColor(budget.category);
+                  // const color = getCategoryColor(budget.category);
 
                   return (
                     <div key={budget.category} className="bg-[#16191e] p-6 rounded-3xl border border-slate-800/50 shadow-xl group hover:border-slate-700/50 transition-all">
@@ -415,7 +400,7 @@ export default function Expenses() {
               <div className="space-y-3">
                 {filteredExpenses.map(expense => {
                   const dueStatus = expense.dueDate ? getDueStatus(expense.dueDate) : null;
-                  const color = getCategoryColor(expense.category);
+                  // const color = getCategoryColor(expense.category);
                   const icon = getCategoryIcon(expense.category);
 
                   return (
@@ -669,7 +654,7 @@ export default function Expenses() {
       </div>
 
       {/* Budget Setting Modal */}
-      {showBudgetModal && editingBudget && (
+      {showBudgetModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-300">
           <div className="bg-[#16191e] w-full max-w-md rounded-[2.5rem] border border-slate-800 p-8 shadow-2xl relative">
             <button 

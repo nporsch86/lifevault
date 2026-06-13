@@ -1,9 +1,10 @@
 import { Plus, MoreVertical, CheckCircle2, Circle, Clock, CheckSquare, Wallet, FileText, Check, DollarSign, AlertCircle, Video, Car, Share2, Users, X, MapPin, ExternalLink } from 'lucide-react';
 import React, { useState, useEffect } from 'react';
 import { usePlanner } from '../store/PlannerContext';
-import type { PlannerTask } from '../store/PlannerContext';
+import type { PlannerTask, PlannerEvent } from '../store/PlannerContext';
 import AddEventModal from '../components/AddEventModal';
 import VoiceInput from '../components/VoiceInput';
+import HandwritingOverlay from '../components/HandwritingOverlay';
 import { parseVoiceCommand } from '../utils/voiceParser';
 
 const HOURS = Array.from({ length: 24 }, (_, i) => {
@@ -13,19 +14,30 @@ const HOURS = Array.from({ length: 24 }, (_, i) => {
   return { label: `${displayHour} ${period}`, value: hour };
 });
 
-const categoryColors: Record<string, string> = {
-  Work: 'bg-blue-600/20 border-blue-600/40 text-blue-200',
-  Personal: 'bg-emerald-600/20 border-emerald-600/40 text-emerald-200',
-  Important: 'bg-rose-600/20 border-rose-600/40 text-rose-200',
-  Confidential: 'bg-purple-600/20 border-purple-600/40 text-purple-200',
-  Bill: 'bg-amber-500/20 border-amber-500/40 text-amber-200',
-  Medical: 'bg-teal-600/20 border-teal-600/40 text-teal-200',
-  Family: 'bg-indigo-600/20 border-indigo-600/40 text-indigo-200',
-  Health: 'bg-cyan-600/20 border-cyan-600/40 text-cyan-200',
-};
-
 export default function DailyView() {
-  const { events, tasks, budgets, toggleTask, addTask, togglePaid, addEvent, updateEvent, respondToInvite } = usePlanner();
+  const { events, tasks, budgets, toggleTask, addTask, togglePaid, addEvent, updateEvent, respondToInvite, categories, expenses, allDayEvents } = usePlanner();
+
+  const getCategoryColorClass = (catName: string) => {
+    const cat = categories.find(c => c.name === catName);
+    if (cat) {
+      // Since we use Tailwind, and dynamic arbitrary colors are tricky without a mapping or inline styles
+      // We will fallback to a mapping if it matches, or use inline styles if necessary.
+      // But let's check if the cat name is one of the standard ones.
+      const standard: Record<string, string> = {
+        Work: 'bg-blue-600/20 border-blue-600/40 text-blue-200',
+        Personal: 'bg-emerald-600/20 border-emerald-600/40 text-emerald-200',
+        Important: 'bg-rose-600/20 border-rose-600/40 text-rose-200',
+        Confidential: 'bg-purple-600/20 border-purple-600/40 text-purple-200',
+        Bill: 'bg-amber-500/20 border-amber-500/40 text-amber-200',
+        Medical: 'bg-teal-600/20 border-teal-600/40 text-teal-200',
+        Family: 'bg-indigo-600/20 border-indigo-600/40 text-indigo-200',
+        Health: 'bg-cyan-600/20 border-cyan-600/40 text-cyan-200',
+      };
+      if (standard[catName]) return standard[catName];
+      return 'bg-slate-600/20 border-slate-600/40 text-slate-200';
+    }
+    return 'bg-slate-600/20 border-slate-600/40 text-slate-200';
+  };
   const [currentTime, setCurrentTime] = useState(new Date());
 
   const handleVoiceCommand = (text: string) => {
@@ -85,24 +97,26 @@ export default function DailyView() {
   const [sharingEventId, setSharingEventId] = useState<string | null>(null);
   const [newInvitee, setNewInvitee] = useState('');
   const [inlineEvent, setInlineEvent] = useState<{ hour: number; title: string } | null>(null);
+  const [handwritingHour, setHandwritingHour] = useState<number | null>(null);
 
   const todayTasks = tasks.filter(t => t.date === todayDateStr);
   const todayEvents = events.filter(e => e.date === todayDateStr);
+  const todayAllDay = allDayEvents.filter(e => e.date === todayDateStr);
   
   // Merge expenses with due dates into events for display
-  const billEvents = expenses
+  const billEvents: PlannerEvent[] = expenses
     .filter(ex => ex.dueDate === todayDateStr)
     .map(ex => ({
       id: `bill-${ex.id}`,
       title: `${ex.note} Due`,
       date: ex.date,
-      category: 'Bill' as const,
+      category: 'Bill',
       amount: ex.amount,
       isPaid: false, // in a real app, check if transaction exists
       startTime: '09:00', // Default bills to 9am
     }));
 
-  const displayEvents = [...todayEvents, ...billEvents];
+  const displayEvents: PlannerEvent[] = [...todayEvents, ...billEvents];
 
   const handleAddTask = (e: React.FormEvent) => {
     e.preventDefault();
@@ -118,7 +132,13 @@ export default function DailyView() {
     setNewTaskTitle('');
   };
 
-  const handleSlotClick = (hour: number) => {
+  const handleSlotClick = (e: React.PointerEvent, hour: number) => {
+    if (e.pointerType === 'pen') {
+      setHandwritingHour(hour);
+      setInlineEvent(null);
+      return;
+    }
+
     if (inlineEvent) {
       saveInlineEvent();
     }
@@ -202,7 +222,7 @@ export default function DailyView() {
           <h2 className="text-4xl font-black text-slate-100 tracking-tight">Wednesday, Oct 29</h2>
           <div className="flex items-center space-x-6 pt-2">
             <span className="flex items-center text-xs font-bold text-slate-500"><CheckSquare className="w-4 h-4 mr-2 text-blue-600/50" /> {todayTasks.filter(t => !t.completed).length} pending</span>
-            <span className="flex items-center text-xs font-bold text-slate-500"><Clock className="w-4 h-4 mr-2 text-blue-600/50" /> {todayEvents.length} events</span>
+            <span className="flex items-center text-xs font-bold text-slate-500"><Clock className="w-4 h-4 mr-2 text-blue-600/50" /> {displayEvents.length} events</span>
             <span className="flex items-center text-xs font-bold text-slate-500"><Wallet className="w-4 h-4 mr-2 text-blue-600/50" /> $45.00</span>
           </div>
         </div>
@@ -235,6 +255,30 @@ export default function DailyView() {
             </div>
           </div>
           <div className="flex-1 overflow-y-auto p-6 relative custom-scrollbar">
+            {/* All Day Section */}
+            <div className="flex border-b border-slate-800/50 mb-4 pb-4">
+              <div className="w-20 pr-6 text-right text-[10px] font-black text-blue-500/50 uppercase tracking-tighter">
+                All Day
+              </div>
+              <div className="flex-1 flex flex-wrap gap-3">
+                {todayAllDay.map(note => (
+                  <div key={note.id} className="bg-amber-500/10 border border-amber-500/20 rounded-2xl p-3 flex items-center space-x-3 min-w-[180px] shadow-sm">
+                    <span className="text-lg">📌</span>
+                    <div className="flex-1 min-w-0">
+                      {note.handwrittenData ? (
+                        <img src={note.handwrittenData} alt="Handwritten note" className="h-8 object-contain brightness-200 contrast-125" />
+                      ) : (
+                        <p className="text-xs font-black text-slate-100 truncate">{note.title}</p>
+                      )}
+                    </div>
+                  </div>
+                ))}
+                {todayAllDay.length === 0 && (
+                  <p className="text-[10px] font-bold text-slate-700 italic flex items-center">No all-day events</p>
+                )}
+              </div>
+            </div>
+
             {/* Time Indicator */}
             <div 
               className="absolute left-20 right-0 border-t-2 border-blue-600/50 z-10 flex items-center"
@@ -251,8 +295,26 @@ export default function DailyView() {
                   </div>
                   <div 
                     className="flex-1 py-1 group-hover:bg-slate-800/30 transition-colors relative cursor-pointer"
-                    onClick={() => handleSlotClick(hour.value)}
+                    onPointerDown={(e) => handleSlotClick(e, hour.value)}
                   >
+                    {handwritingHour === hour.value && (
+                      <HandwritingOverlay 
+                        hour={hour.value}
+                        onCancel={() => setHandwritingHour(null)}
+                        onCapture={(text, dataUrl) => {
+                          addEvent({
+                            id: Math.random().toString(36).substr(2, 9),
+                            title: text,
+                            date: todayDateStr,
+                            startTime: `${hour.value.toString().padStart(2, '0')}:00`,
+                            category: 'Personal',
+                            isHandwritten: true,
+                            handwrittenData: dataUrl,
+                          });
+                          setHandwritingHour(null);
+                        }}
+                      />
+                    )}
                     {inlineEvent?.hour === hour.value && (
                       <div 
                         className="absolute inset-x-2 top-1 bottom-1 bg-blue-600/20 border border-blue-500 rounded-2xl p-4 z-30 animate-in zoom-in-95 duration-200"
@@ -273,7 +335,7 @@ export default function DailyView() {
                         />
                       </div>
                     )}
-                    {todayEvents
+                    {displayEvents
                       .filter(e => {
                         if (e.startTime) return parseInt(e.startTime.split(':')[0]) === hour.value;
                         if (e.category === 'Bill') return hour.value === 9; // Show bills at 9am if no time
@@ -289,7 +351,7 @@ export default function DailyView() {
                           billStatus === 'paid' ? 'bg-emerald-600/20 border-emerald-500/50 text-emerald-400' :
                           billStatus === 'overdue' ? 'bg-rose-600/30 border-rose-500/50 text-rose-200' :
                           'bg-amber-500/20 border-amber-500/40 text-amber-200'
-                        ) : categoryColors[event.category];
+                        ) : getCategoryColorClass(event.category);
 
                         return (
                           <React.Fragment key={event.id}>
@@ -318,11 +380,15 @@ export default function DailyView() {
                                 minHeight: '60px'
                               }}
                             >
-                            <div className="min-w-0">
-                              <p className="font-black text-sm truncate leading-tight flex items-center">
+                            <div className="min-w-0 flex-1">
+                              <div className="font-black text-sm truncate leading-tight flex items-center">
                                 {isBill && <FileText className="w-4 h-4 mr-2 shrink-0" />}
-                                {event.title}
-                              </p>
+                                {event.isHandwritten && event.handwrittenData ? (
+                                  <img src={event.handwrittenData} alt="Handwritten" className="h-8 object-contain brightness-200 contrast-125" />
+                                ) : (
+                                  event.title
+                                )}
+                              </div>
                               <p className="text-[10px] font-bold opacity-60 mt-0.5 uppercase tracking-widest">
                                 {isBill ? `Amount: ${event.amount}` : `${event.startTime} • ${duration} MIN`}
                               </p>
