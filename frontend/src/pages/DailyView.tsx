@@ -100,6 +100,9 @@ export default function DailyView() {
   const [handwritingHour, setHandwritingHour] = useState<number | null>(null);
 
   const todayTasks = tasks.filter(t => t.date === todayDateStr);
+  const rolledOverTasks = tasks.filter(t => t.date < todayDateStr && !t.completed);
+  const allVisibleTasks = [...rolledOverTasks, ...todayTasks];
+  
   const todayEvents = events.filter(e => e.date === todayDateStr);
   const todayAllDay = allDayEvents.filter(e => e.date === todayDateStr);
   
@@ -241,11 +244,45 @@ export default function DailyView() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-10 flex-1 min-h-0">
+      {/* Focus & Alerts Row */}
+      <div className="flex flex-col lg:flex-row gap-6">
+        {/* Focus Card */}
+        <div className="flex-1 bg-blue-600 rounded-3xl p-6 text-slate-950 shadow-xl shadow-blue-600/10 relative overflow-hidden group min-h-[100px] flex items-center">
+          <div className="absolute -top-10 -right-10 opacity-10 group-hover:rotate-12 transition-transform duration-700">
+            <Clock className="w-32 h-32" />
+          </div>
+          <div className="relative z-10">
+            <h3 className="font-black text-sm mb-2 flex items-center tracking-tight uppercase tracking-widest">
+              <span className="mr-3 text-xl">✨</span>
+              Focus of the Day
+            </h3>
+            <p className="text-slate-900 text-sm leading-relaxed font-bold">
+              Review the <span className="underline decoration-2 underline-offset-2">Quarterly Planning</span> before the end of the day. You're on track!
+            </p>
+          </div>
+        </div>
+
+        {/* Budget Alerts */}
+        {budgetAlerts.length > 0 && (
+          <div className="flex flex-col gap-3 justify-center min-w-[300px]">
+            {budgetAlerts.map((alert, idx) => (
+              <div 
+                key={idx} 
+                className={`flex items-center p-4 rounded-2xl border ${alert?.type === 'critical' ? 'bg-rose-600/20 border-rose-500/50 text-rose-200' : 'bg-orange-600/10 border-orange-500/30 text-orange-200'} shadow-lg`}
+              >
+                <AlertCircle className={`w-5 h-5 mr-3 shrink-0 ${alert?.type === 'critical' ? 'text-rose-500' : 'text-orange-500'}`} />
+                <p className="text-[10px] font-black uppercase tracking-widest">{alert?.text}</p>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_350px] gap-8 flex-1 min-h-0">
         {/* Left Column: Schedule */}
-        <div className="lg:col-span-2 bg-[#16191e] rounded-3xl border border-slate-800/50 shadow-xl overflow-hidden flex flex-col h-[750px]">
+        <div className="bg-[#16191e] rounded-3xl border border-slate-800/50 shadow-xl overflow-hidden flex flex-col h-[750px]">
           <div className="p-6 border-b border-slate-800/50 flex justify-between items-center">
-            <h3 className="font-black text-slate-100 flex items-center tracking-tight text-sm uppercase">
+            <h3 className="font-black text-slate-100 flex items-center tracking-tight text-xs uppercase tracking-widest">
               <Clock className="w-5 h-5 mr-2 text-blue-600" />
               Schedule
             </h3>
@@ -288,10 +325,16 @@ export default function DailyView() {
             </div>
 
             <div className="space-y-0">
-              {HOURS.map((hour) => (
+              {HOURS.map((hour) => {
+                const hourTasks = allVisibleTasks.filter(t => t.startTime && parseInt(t.startTime.split(':')[0]) === hour.value);
+                
+                return (
                 <div key={hour.value} className="flex border-t border-slate-800/50 h-16 relative group">
-                  <div className="w-20 pr-6 py-2 text-right text-[10px] font-black text-slate-600 select-none tracking-tighter">
+                  <div className="w-20 pr-6 py-2 text-right text-[10px] font-black text-slate-600 select-none tracking-tighter relative">
                     {hour.label}
+                    {hourTasks.length > 0 && (
+                      <div className="absolute top-2 right-2 w-1.5 h-1.5 bg-blue-500 rounded-full shadow-[0_0_5px_rgba(59,130,246,0.8)]" title={`${hourTasks.length} tasks at this hour`} />
+                    )}
                   </div>
                   <div 
                     className="flex-1 py-1 group-hover:bg-slate-800/30 transition-colors relative cursor-pointer"
@@ -500,45 +543,17 @@ export default function DailyView() {
           </div>
         </div>
 
-        {/* Right Column: Panels */}
-        <div className="space-y-8 flex flex-col min-h-0">
-          {/* Focus Card */}
-          <div className="bg-blue-600 rounded-3xl p-8 text-slate-950 shadow-xl shadow-blue-600/10 relative overflow-hidden group">
-            <div className="absolute -top-10 -right-10 opacity-10 group-hover:rotate-12 transition-transform duration-700">
-              <Clock className="w-48 h-48" />
-            </div>
-            <h3 className="font-black text-xl mb-4 flex items-center relative z-10 tracking-tight">
-              <span className="mr-3 text-2xl">✨</span>
-              FOCUS OF THE DAY
-            </h3>
-            <p className="text-slate-900 text-sm leading-relaxed relative z-10 font-bold">
-              Review the <span className="underline decoration-2 underline-offset-2">Quarterly Planning</span> before the end of the day. You're on track for a productive day!
-            </p>
-          </div>
-
-          {/* Budget Alerts Panel */}
-          {budgetAlerts.length > 0 && (
-            <div className="space-y-3">
-              {budgetAlerts.map((alert, idx) => (
-                <div 
-                  key={idx} 
-                  className={`flex items-center p-4 rounded-2xl border ${alert?.type === 'critical' ? 'bg-rose-600/20 border-rose-500/50 text-rose-200' : 'bg-orange-600/10 border-orange-500/30 text-orange-200'} shadow-lg animate-in slide-in-from-right duration-500`}
-                >
-                  <AlertCircle className={`w-5 h-5 mr-3 shrink-0 ${alert?.type === 'critical' ? 'text-rose-500' : 'text-orange-500'}`} />
-                  <p className="text-xs font-black uppercase tracking-widest">{alert?.text}</p>
-                </div>
-              ))}
-            </div>
-          )}
-
+        {/* Right Column: Tasks integrated alongside */}
+        <div className="flex flex-col min-h-0">
           {/* Tasks Panel */}
-          <div className="bg-[#16191e] rounded-3xl border border-slate-800/50 shadow-xl overflow-hidden flex flex-col flex-1 min-h-0">
-            <div className="p-6 border-b border-slate-800/50 flex justify-between items-center">
-              <h3 className="font-black text-slate-100 tracking-tight text-xs uppercase tracking-widest">Today's Tasks</h3>
-              <div className="flex space-x-1.5">
-                <div className="w-1.5 h-1.5 rounded-full bg-slate-700"></div>
-                <div className="w-1.5 h-1.5 rounded-full bg-slate-700"></div>
-                <div className="w-1.5 h-1.5 rounded-full bg-slate-700"></div>
+          <div className="bg-[#16191e] rounded-3xl border border-slate-800/50 shadow-xl overflow-hidden flex flex-col h-[750px]">
+            <div className="p-6 border-b border-slate-800/50 flex justify-between items-center bg-blue-600/5">
+              <h3 className="font-black text-slate-100 tracking-tight text-xs uppercase tracking-widest flex items-center">
+                <CheckSquare className="w-5 h-5 mr-2 text-blue-500" />
+                Today's Tasks
+              </h3>
+              <div className="flex items-center space-x-2">
+                <span className="text-[10px] font-black text-slate-500 uppercase">{allVisibleTasks.filter(t => !t.completed).length} REMAINING</span>
               </div>
             </div>
             
@@ -549,12 +564,12 @@ export default function DailyView() {
                     type="text"
                     value={newTaskTitle}
                     onChange={(e) => setNewTaskTitle(e.target.value)}
-                    placeholder="Add a task..."
-                    className="w-full pl-5 pr-12 py-3.5 bg-slate-800 border border-slate-700/50 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-600/50 focus:bg-slate-800 transition-all font-bold text-slate-100 placeholder:text-slate-600"
+                    placeholder="Quick add task..."
+                    className="w-full pl-5 pr-12 py-4 bg-slate-800/50 border border-slate-700/50 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-600/50 focus:bg-slate-800 transition-all font-bold text-slate-100 placeholder:text-slate-600"
                   />
                   <button 
                     type="submit"
-                    className="absolute right-3 top-2.5 p-1.5 text-blue-600 hover:bg-blue-600/10 rounded-xl transition-all"
+                    className="absolute right-3 top-3 p-1.5 text-blue-600 hover:bg-blue-600/10 rounded-xl transition-all"
                   >
                     <Plus className="w-6 h-6" />
                   </button>
@@ -563,11 +578,14 @@ export default function DailyView() {
             </div>
 
             <div className="flex-1 overflow-y-auto p-6 space-y-4 custom-scrollbar">
-              {todayTasks.map((task) => (
+              {allVisibleTasks.map((task) => {
+                const isRolledOver = task.date < todayDateStr;
+                
+                return (
                 <div 
                   key={task.id} 
                   className={`group flex items-center p-4 rounded-2xl border transition-all ${
-                    task.completed ? 'bg-slate-800/50 border-transparent opacity-50' : 'bg-slate-800 border-slate-700/50 hover:border-blue-600/30 hover:shadow-lg shadow-black/20'
+                    task.completed ? 'bg-slate-800/30 border-transparent opacity-40' : 'bg-slate-800/50 border-slate-700/50 hover:border-blue-600/30 hover:shadow-lg shadow-black/20'
                   }`}
                 >
                   <button 
@@ -593,16 +611,30 @@ export default function DailyView() {
                       />
                     ) : (
                       <>
-                        <p 
-                          className={`text-sm font-black truncate cursor-text ${task.completed ? 'line-through text-slate-600' : 'text-slate-200'}`}
-                          onClick={() => startEditing(task)}
-                        >
-                          {task.title}
-                        </p>
+                        <div className="flex items-center space-x-2">
+                          <p 
+                            className={`text-sm font-black truncate cursor-text ${task.completed ? 'line-through text-slate-600' : 'text-slate-200'}`}
+                            onClick={() => startEditing(task)}
+                          >
+                            {task.title}
+                          </p>
+                          {isRolledOver && !task.completed && (
+                            <span className="px-1.5 py-0.5 bg-amber-500/20 text-amber-500 text-[8px] font-black rounded uppercase tracking-tighter shrink-0" title="Rolled over from yesterday">Rollover</span>
+                          )}
+                        </div>
                         <div className="flex items-center space-x-3 mt-1.5">
-                          <span className="text-[9px] font-black text-blue-600/60 uppercase tracking-widest">
+                          <span className={`text-[9px] font-black uppercase tracking-widest ${
+                            task.category === 'Work' ? 'text-blue-500/60' :
+                            task.category === 'Personal' ? 'text-emerald-500/60' :
+                            'text-slate-500/60'
+                          }`}>
                             {task.category}
                           </span>
+                          {task.startTime && (
+                            <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest flex items-center">
+                              <Clock className="w-3 h-3 mr-1" /> {task.startTime}
+                            </span>
+                          )}
                         </div>
                       </>
                     )}
@@ -620,7 +652,14 @@ export default function DailyView() {
                     </button>
                   </div>
                 </div>
-              ))}
+                );
+              })}
+              {allVisibleTasks.length === 0 && (
+                <div className="flex flex-col items-center justify-center h-full text-slate-600 space-y-2 opacity-50">
+                  <CheckSquare className="w-12 h-12" />
+                  <p className="text-xs font-black uppercase tracking-widest">No tasks for today</p>
+                </div>
+              )}
             </div>
           </div>
         </div>

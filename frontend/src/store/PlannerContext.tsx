@@ -30,6 +30,7 @@ export interface PlannerTask {
   id: string;
   title: string;
   date: string; // ISO date YYYY-MM-DD
+  startTime?: string; // Optional time HH:MM
   completed: boolean;
   priority: 'low' | 'medium' | 'high';
   category: string;
@@ -203,7 +204,9 @@ export const PlannerProvider: React.FC<{ children: ReactNode }> = ({ children })
     { id: 't3', title: 'Email client', date: '2025-10-08', completed: true, priority: 'medium', category: 'Work' },
     { id: 't4', title: 'Prepare slides', date: '2025-10-20', completed: false, priority: 'high', category: 'Work' },
     { id: 't5', title: 'Book flight', date: '2025-10-20', completed: true, priority: 'medium', category: 'Personal' },
-    { id: 't6', title: 'Call mom', date: '2025-10-29', completed: false, priority: 'low', category: 'Personal' },
+    { id: 't6', title: 'Call mom', date: '2025-10-29', startTime: '11:00', completed: false, priority: 'low', category: 'Personal' },
+    { id: 't7', title: 'Review PRs', date: '2025-10-29', startTime: '14:00', completed: false, priority: 'medium', category: 'Work' },
+    { id: 't8', title: 'Yoga', date: '2025-10-28', completed: false, priority: 'low', category: 'Personal' },
   ]);
 
   const [sharedCalendars, setSharedCalendars] = useState<SharedCalendar[]>([

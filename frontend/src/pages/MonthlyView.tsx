@@ -10,7 +10,7 @@ const DAYS_SHORT = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 export default function MonthlyView() {
   const navigate = useNavigate();
-  const { events, tasks, expenses, categories, addEvent, addAllDayEvent, allDayEvents } = usePlanner();
+  const { events, tasks, expenses, categories, addAllDayEvent, allDayEvents } = usePlanner();
 
   const getCategoryColorClass = (catName: string) => {
     // const cat = categories.find(c => c.name === catName);
