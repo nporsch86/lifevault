@@ -14,23 +14,23 @@ import {
 } from 'lucide-react';
 
 const menuItems = [
-  { icon: CalendarDays, label: 'Daily', path: '/' },
-  { icon: CalendarRange, label: 'Weekly', path: '/weekly' },
-  { icon: CalendarClock, label: 'Monthly', path: '/monthly' },
-  { icon: CheckSquare, label: 'Tasks', path: '/tasks' },
-  { icon: Wallet, label: 'Expenses', path: '/expenses' },
-  { icon: StickyNote, label: 'Notes', path: '/notes' },
-  { icon: LinkIcon, label: 'Links', path: '/links' },
-  { icon: LayoutTemplate, label: 'Templates', path: '/templates' },
-  { icon: ShieldCheck, label: 'Private', path: '/private' },
-  { icon: Settings, label: 'Settings', path: '/settings' },
+  { icon: CalendarDays, label: 'Daily', path: '/app' },
+  { icon: CalendarRange, label: 'Weekly', path: '/app/weekly' },
+  { icon: CalendarClock, label: 'Monthly', path: '/app/monthly' },
+  { icon: CheckSquare, label: 'Tasks', path: '/app/tasks' },
+  { icon: Wallet, label: 'Expenses', path: '/app/expenses' },
+  { icon: StickyNote, label: 'Notes', path: '/app/notes' },
+  { icon: LinkIcon, label: 'Links', path: '/app/links' },
+  { icon: LayoutTemplate, label: 'Templates', path: '/app/templates' },
+  { icon: ShieldCheck, label: 'Private', path: '/app/private' },
+  { icon: Settings, label: 'Settings', path: '/app/settings' },
 ];
 
 const Navbar = () => {
   return (
     <header className="h-14 bg-[#16191e] border-b border-slate-800 flex items-center justify-between px-6 sticky top-0 z-50">
       <div className="flex items-center space-x-8 h-full">
-        <NavLink to="/" className="flex items-center">
+        <NavLink to="/app" className="flex items-center">
           <img src="/logo-sidebar.png" alt="Lifevault" className="h-6 w-auto mr-2" />
         </NavLink>
         
@@ -55,7 +55,7 @@ const Navbar = () => {
 
       <div className="flex items-center space-x-2">
         <NavLink
-          to="/private"
+          to="/app/private"
           className={({ isActive }) => `
             p-2 rounded-xl transition-all
             ${isActive ? 'bg-purple-600/10 text-purple-500' : 'text-slate-500 hover:text-purple-400 hover:bg-slate-800'}
