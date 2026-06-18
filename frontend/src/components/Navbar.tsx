@@ -42,15 +42,12 @@ const Navbar = () => {
               className={({ isActive }) => `
                 flex items-center px-4 h-full text-[10px] font-black uppercase tracking-widest transition-all relative group
                 ${isActive 
-                  ? 'text-blue-500' 
+                  ? 'text-blue-500 after:absolute after:bottom-0 after:left-4 after:right-4 after:h-0.5 after:bg-blue-600 after:shadow-[0_0_8px_rgba(37,99,235,0.5)]'
                   : 'text-slate-500 hover:text-slate-200'}
               `}
             >
               <item.icon className="w-4 h-4 mr-2 hidden lg:block" />
               <span className="hidden sm:block">{item.label}</span>
-              {({ isActive }: { isActive: boolean }) => isActive && (
-                <div className="absolute bottom-0 left-4 right-4 h-0.5 bg-blue-600 shadow-[0_0_8px_rgba(37,99,235,0.5)]" />
-              )}
             </NavLink>
           ))}
         </nav>

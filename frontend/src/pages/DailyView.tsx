@@ -538,7 +538,7 @@ export default function DailyView() {
                     }
                   </div>
                 </div>
-              ))}
+              );})}
             </div>
           </div>
         </div>
