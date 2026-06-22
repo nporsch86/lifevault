@@ -1,97 +1,26 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" fill="none">
-  <!-- Definitions for gradients and filters -->
+<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 200 200">
   <defs>
-    <!-- Dark deep navy blue background gradient -->
-    <radialGradient id="bg-grad" cx="50%" cy="35%" r="65%">
-      <stop offset="0%" stop-color="#1e2246" />
-      <stop offset="100%" stop-color="#11111e" />
-    </radialGradient>
-
-    <!-- Vibrant primary blue gradient for book pages -->
-    <linearGradient id="book-grad" x1="0%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%" stop-color="#3B82F6" />
-      <stop offset="100%" stop-color="#1D4ED8" />
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="200" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#1a1a2e"/>
+      <stop offset="1" stop-color="#0f0f1a"/>
     </linearGradient>
-
-    <!-- Shimmer/highlight for pages -->
-    <linearGradient id="page-highlight" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#60A5FA" stop-opacity="0.9" />
-      <stop offset="100%" stop-color="#2563EB" stop-opacity="0.4" />
+    <linearGradient id="book" x1="0" y1="0" x2="0" y2="200" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#3B82F6"/>
+      <stop offset="1" stop-color="#1D4ED8"/>
     </linearGradient>
-
-    <!-- Lock body gradient -->
-    <linearGradient id="lock-grad" x1="0%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%" stop-color="#06B6D4" />
-      <stop offset="100%" stop-color="#0891B2" />
+    <linearGradient id="lock" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#06B6D4"/>
+      <stop offset="1" stop-color="#0891B2"/>
     </linearGradient>
-
-    <!-- Subtle drop shadow for the lock -->
-    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
-      <feDropShadow dx="0" dy="4" stdDeviation="4" flood-color="#020617" flood-opacity="0.5" />
-    </filter>
-
-    <!-- Glow effect for open book -->
-    <filter id="glow" x="-15%" y="-15%" width="130%" height="130%">
-      <feGaussianBlur stdDeviation="3" result="blur" />
-      <feComposite in="SourceGraphic" in2="blur" operator="over" />
-    </filter>
   </defs>
-
-  <!-- Background Squircle (polished app-icon look) -->
-  <rect width="200" height="200" rx="46" fill="url(#bg-grad)" />
-
-  <!-- Outer ambient book background glow -->
-  <g opacity="0.3" filter="url(#glow)">
-    <path d="M 100 86 C 84 74, 56 74, 38 86 L 38 141 C 56 129, 84 129, 100 141 Z" fill="url(#book-grad)" />
-    <path d="M 100 86 C 116 74, 144 74, 162 86 L 162 141 C 144 129, 116 129, 100 141 Z" fill="url(#book-grad)" />
-  </g>
-
-  <!-- Middle book pages layer (stacked depth effect) -->
-  <g opacity="0.6">
-    <path d="M 100 83 C 84 72, 58 72, 41 83 L 41 138 C 58 127, 84 127, 100 138 Z" fill="url(#book-grad)" />
-    <path d="M 100 83 C 116 72, 142 72, 159 83 L 159 138 C 142 127, 116 127, 100 138 Z" fill="url(#book-grad)" />
-  </g>
-
-  <!-- Front main book pages layer -->
-  <g filter="url(#shadow)">
-    <!-- Left page -->
-    <path d="M 100 80 C 85 70, 60 70, 44 80 L 44 135 C 60 125, 85 125, 100 135 Z" fill="url(#page-highlight)" stroke="#93C5FD" stroke-width="1.5" stroke-linejoin="round" />
-    <!-- Right page -->
-    <path d="M 100 80 C 115 70, 140 70, 156 80 L 156 135 C 140 125, 115 125, 100 135 Z" fill="url(#page-highlight)" stroke="#93C5FD" stroke-width="1.5" stroke-linejoin="round" />
-  </g>
-
-  <!-- Glowing linear task guidelines (representing daily planner list) -->
-  <g opacity="0.75" stroke="#93C5FD" stroke-width="2" stroke-linecap="round" fill="none">
-    <!-- Left page lines -->
-    <path d="M 58 94 C 68 89, 78 89, 86 94" />
-    <path d="M 58 106 C 68 101, 78 101, 86 106" />
-    <path d="M 58 118 C 68 113, 78 113, 86 118" />
-    
-    <!-- Right page lines -->
-    <path d="M 114 94 C 122 89, 132 89, 142 94" />
-    <path d="M 114 106 C 122 101, 132 101, 142 106" />
-    <path d="M 114 118 C 122 113, 132 113, 142 118" />
-  </g>
-
-  <!-- Center divider shadow (book spine depth) -->
-  <line x1="100" y1="80" x2="100" y2="135" stroke="#0F172A" stroke-width="2.5" opacity="0.4" />
-
-  <!-- The Padlock / Vault Security overlay -->
-  <g filter="url(#shadow)">
-    <!-- Lock Shackle (U-loop) -->
-    <path d="M 87 101 L 87 87 C 87 79, 113 79, 113 87 L 113 101" stroke="url(#lock-grad)" stroke-width="5.5" stroke-linecap="round" fill="none" />
-    <path d="M 87 101 L 87 87 C 87 79, 113 79, 113 87 L 113 101" stroke="#E0F2FE" stroke-width="1.5" stroke-linecap="round" fill="none" opacity="0.6" />
-
-    <!-- Lock Body -->
-    <rect x="76" y="97" width="48" height="36" rx="10" fill="url(#lock-grad)" stroke="#E0F2FE" stroke-width="2" />
-    
-    <!-- Lock Body Reflection Highlight -->
-    <path d="M 80 101 L 120 101" stroke="#FFFFFF" stroke-width="1.5" stroke-linecap="round" opacity="0.4" />
-
-    <!-- Keyhole -->
-    <!-- Circle hole -->
-    <circle cx="100" cy="111" r="4.5" fill="#11111E" />
-    <!-- Triangle slot -->
-    <path d="M 98 111 L 102 111 L 103.5 122 L 96.5 122 Z" fill="#11111E" />
-  </g>
+  <rect width="200" height="200" rx="40" fill="url(#bg)"/>
+  <path d="M40 140 Q40 60 100 50 Q160 60 160 140 L160 160 Q100 150 40 160 Z" fill="url(#book)" opacity="0.3" stroke="#3B82F6" stroke-width="2"/>
+  <line x1="100" y1="50" x2="100" y2="155" stroke="#60A5FA" stroke-width="2" opacity="0.8"/>
+  <path d="M52 125 L52 75 Q75 65 98 60 L98 145 Q75 140 52 148 Z" fill="url(#book)" opacity="0.7"/>
+  <path d="M148 125 L148 75 Q125 65 102 60 L102 145 Q125 140 148 148 Z" fill="url(#book)" opacity="0.7"/>
+  <path d="M80 110 L80 85 Q80 65 100 65 Q120 65 120 85 L120 110" fill="none" stroke="#06B6D4" stroke-width="8" stroke-linecap="round"/>
+  <rect x="72" y="105" width="56" height="35" rx="6" fill="url(#lock)"/>
+  <circle cx="100" cy="120" r="6" fill="#0f0f1a"/>
+  <rect x="98" y="120" width="4" height="10" rx="1" fill="#0f0f1a"/>
+  <circle cx="100" cy="40" r="3" fill="#60A5FA" opacity="0.8"/>
 </svg>
