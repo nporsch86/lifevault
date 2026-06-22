@@ -218,7 +218,11 @@ export default function Landing() {
       <footer className="py-12 px-6 border-t border-slate-800">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center space-x-2"><img src="/logo-sidebar.png" alt="Lifevault" className="h-6 w-auto" /></div>
-          <p className="text-slate-500 text-sm">© 2026 Lifevault. All rights reserved.</p>
+          <div className="flex items-center space-x-6">
+            <a href="/privacy" className="text-slate-500 hover:text-slate-300 text-sm transition">Privacy</a>
+            <a href="/terms" className="text-slate-500 hover:text-slate-300 text-sm transition">Terms</a>
+            <p className="text-slate-500 text-sm">© 2026 Lifevault. All rights reserved.</p>
+          </div>
         </div>
       </footer>
     </div>

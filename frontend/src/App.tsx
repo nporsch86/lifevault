@@ -1,6 +1,8 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { PlannerProvider } from './store/PlannerContext';
 import Landing from './pages/Landing';
+import Privacy from './pages/Privacy';
+import Terms from './pages/Terms';
 import AppLayout from './layouts/AppLayout';
 import DailyView from './pages/DailyView';
 import WeeklyView from './pages/WeeklyView';
@@ -20,6 +22,8 @@ function App() {
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Landing />} />
+          <Route path="/privacy" element={<Privacy />} />
+          <Route path="/terms" element={<Terms />} />
           <Route path="/shared/event/:uuid" element={<SharedEventView />} />
           <Route path="/app" element={<AppLayout />}>
             <Route index element={<DailyView />} />
