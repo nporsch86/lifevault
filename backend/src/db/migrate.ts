@@ -234,6 +234,9 @@ const migrations: string[] = [
     state_data TEXT NOT NULL DEFAULT '{}',
     updated_at TEXT NOT NULL DEFAULT (datetime('now'))
   )`,
+
+  `ALTER TABLE users ADD COLUMN reset_token TEXT`,
+  `ALTER TABLE users ADD COLUMN reset_token_expires TEXT`,
 ];
 
 export async function runMigrations() {

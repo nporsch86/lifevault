@@ -3,6 +3,8 @@ import { PlannerProvider } from './store/PlannerContext';
 import { AuthProvider } from './store/AuthContext';
 import Landing from './pages/Landing';
 import AuthPage from './pages/AuthPage';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
 import Privacy from './pages/Privacy';
 import Terms from './pages/Terms';
 import AppLayout from './layouts/AppLayout';
@@ -27,6 +29,8 @@ function App() {
           <Routes>
             <Route path="/" element={<Landing />} />
             <Route path="/auth" element={<AuthPage />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/privacy" element={<Privacy />} />
             <Route path="/terms" element={<Terms />} />
             <Route path="/shared/event/:uuid" element={<SharedEventView />} />

@@ -128,4 +128,69 @@ auth.get("/me", authMiddleware, async (c) => {
   return c.json({ user: profile });
 });
 
+// --- Forgot Password ---
+auth.post("/forgot-password", async (c) => {
+  try {
+    const body = await c.req.json();
+    const { email } = body;
+    if (!email) return c.json({ error: "Email is required" }, 400);
+
+    const user = await findUserByEmail(email);
+    if (!user) return c.json({ error: "If that email exists, a reset link has been sent" });
+
+    const resetToken = crypto.randomUUID();
+    const resetExpires = new Date(Date.now() + 60 * 60 * 1000).toISOString(); // 1 hour
+
+    await db.execute({
+      sql: `UPDATE users SET reset_token = ?, reset_token_expires = ? WHERE id = ?`,
+      args: [resetToken, resetExpires, user.id],
+    });
+
+    const resetLink = `https://planvault.net/reset-password?token=${resetToken}&email=${encodeURIComponent(email)}`;
+
+    return c.json({
+      message: "If that email exists, a reset link has been sent",
+      // For beta: include the link directly since email isn't configured yet
+      resetLink,
+    });
+  } catch (err) {
+    console.error("Forgot password error:", err);
+    return c.json({ error: "Internal server error" }, 500);
+  }
+});
+
+// --- Reset Password ---
+auth.post("/reset-password", async (c) => {
+  try {
+    const body = await c.req.json();
+    const { token, email, password } = body;
+    if (!token || !email || !password) {
+      return c.json({ error: "Token, email, and password are required" }, 400);
+    }
+    if (password.length < 6) {
+      return c.json({ error: "Password must be at least 6 characters" }, 400);
+    }
+
+    const result = await db.execute({
+      sql: `SELECT id FROM users WHERE email = ? AND reset_token = ? AND reset_token_expires > datetime('now')`,
+      args: [email, token],
+    });
+
+    if (!result.rows[0]) {
+      return c.json({ error: "Invalid or expired reset token" }, 400);
+    }
+
+    const passwordHash = await bcrypt.hash(password, 12);
+    await db.execute({
+      sql: `UPDATE users SET password_hash = ?, reset_token = NULL, reset_token_expires = NULL WHERE id = ?`,
+      args: [passwordHash, result.rows[0].id],
+    });
+
+    return c.json({ message: "Password reset successfully" });
+  } catch (err) {
+    console.error("Reset password error:", err);
+    return c.json({ error: "Internal server error" }, 500);
+  }
+});
+
 export default auth;

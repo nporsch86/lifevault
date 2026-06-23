@@ -145,6 +145,12 @@ export default function AuthPage() {
                 <>Create Account</>
               )}
             </button>
+
+            {mode === 'login' && (
+              <a href="/forgot-password" className="block text-center text-[11px] font-bold text-slate-500 hover:text-blue-400 transition-colors mt-2">
+                Forgot password?
+              </a>
+            )}
           </form>
 
           <p className="text-center text-[10px] font-bold text-slate-600 mt-6">
