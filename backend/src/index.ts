@@ -22,6 +22,7 @@ import budgetsRoutes from "./routes/budgets.js";
 import aiNotesRoutes from "./routes/aiNotes.js";
 import publicRoutes from "./routes/public.js";
 import sharingRoutes from "./routes/sharing.js";
+import syncStateRoutes from "./routes/syncState.js";
 
 const app = new Hono();
 
@@ -52,6 +53,7 @@ app.route("/api/outlook", outlookSyncRoutes);
 app.route("/api/budgets", budgetsRoutes);
 app.route("/api/ai-notes", aiNotesRoutes);
 app.route("/api/sharing", sharingRoutes);
+app.route("/api/sync-state", syncStateRoutes);
 
 // 404 handler
 app.notFound((c) => c.json({ error: "Not found" }, 404));

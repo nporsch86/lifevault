@@ -228,6 +228,12 @@ const migrations: string[] = [
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
     UNIQUE(event_id, invited_email)
   )`,
+
+  `CREATE TABLE IF NOT EXISTS planner_state (
+    user_id TEXT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+    state_data TEXT NOT NULL DEFAULT '{}',
+    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+  )`,
 ];
 
 export async function runMigrations() {

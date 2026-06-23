@@ -1,5 +1,6 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import type { ReactNode } from 'react';
+import { API_BASE_URL } from '../config';
 
 export interface Guest {
   email: string;
@@ -309,6 +310,56 @@ export const PlannerProvider: React.FC<{ children: ReactNode }> = ({ children })
   const respondToSharedCalendar = (id: string, status: 'accepted' | 'declined') => {
     setSharedCalendars(sharedCalendars.map(s => s.id === id ? { ...s, status } : s));
   };
+
+  // --- Cloud Sync ---
+  const loadedFromServer = useRef(false);
+
+  // Load from server on mount if authenticated
+  useEffect(() => {
+    const token = localStorage.getItem('lifevault_token');
+    if (!token || loadedFromServer.current) return;
+    loadedFromServer.current = true;
+
+    fetch(`${API_BASE_URL}/api/sync-state/planner-state`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then(res => res.json())
+      .then(data => {
+        if (data.state && typeof data.state === 'object') {
+          const s = data.state;
+          if (s.events) setEvents(s.events);
+          if (s.tasks) setTasks(s.tasks);
+          if (s.expenses) setExpenses(s.expenses);
+          if (s.budgets) setBudgets(s.budgets);
+          if (s.goals) setGoals(s.goals);
+          if (s.categories) setCategories(s.categories);
+          if (s.sharedCalendars) setSharedCalendars(s.sharedCalendars);
+          if (s.myShares) setMyShares(s.myShares);
+          if (s.allDayEvents) setAllDayEvents(s.allDayEvents);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  // Save to server on changes (debounced)
+  useEffect(() => {
+    const token = localStorage.getItem('lifevault_token');
+    if (!token || !loadedFromServer.current) return;
+
+    const timer = setTimeout(() => {
+      const state = {
+        events, tasks, expenses, budgets, goals, categories,
+        sharedCalendars, myShares, allDayEvents,
+      };
+      fetch(`${API_BASE_URL}/api/sync-state/planner-state`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify(state),
+      }).catch(() => {});
+    }, 2000);
+
+    return () => clearTimeout(timer);
+  }, [events, tasks, expenses, budgets, goals, allDayEvents]);
 
   return (
     <PlannerContext.Provider value={{ 
