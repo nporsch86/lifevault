@@ -52,7 +52,7 @@ export default function Landing() {
             <button onClick={() => scrollTo('features')} className="text-slate-400 hover:text-white text-sm font-medium transition">Features</button>
             <button onClick={() => scrollTo('download')} className="text-slate-400 hover:text-white text-sm font-medium transition">Download</button>
             <button onClick={() => scrollTo('pricing')} className="text-slate-400 hover:text-white text-sm font-medium transition">Pricing</button>
-            <a href="/app" className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-xl text-sm font-bold transition shadow-lg shadow-blue-600/25">
+            <a href="/auth" className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-xl text-sm font-bold transition shadow-lg shadow-blue-600/25">
               Get Started Free
             </a>
           </div>
