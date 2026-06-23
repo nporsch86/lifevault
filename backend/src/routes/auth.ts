@@ -4,6 +4,7 @@ import bcrypt from "bcryptjs";
 import { SignJWT } from "jose";
 import { createUser, findUserByEmail, findUserById } from "../models/user.js";
 import { secret, authMiddleware, getUser } from "../middleware/auth.js";
+import db from "../db/client.js";
 
 const auth = new Hono();
 
@@ -181,9 +182,10 @@ auth.post("/reset-password", async (c) => {
     }
 
     const passwordHash = await bcrypt.hash(password, 12);
+    const row = result.rows[0] as { id: string };
     await db.execute({
       sql: `UPDATE users SET password_hash = ?, reset_token = NULL, reset_token_expires = NULL WHERE id = ?`,
-      args: [passwordHash, result.rows[0].id],
+      args: [passwordHash, row.id],
     });
 
     return c.json({ message: "Password reset successfully" });
