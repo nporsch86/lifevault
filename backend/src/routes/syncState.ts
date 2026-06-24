@@ -33,7 +33,7 @@ syncState.get("/planner-state", async (c) => {
   }
 
   try {
-    const row = result.rows[0] as { state_data: string };
+    const row = result.rows[0] as unknown as { state_data: string };
     const state = JSON.parse(row.state_data);
     return c.json({ state });
   } catch {

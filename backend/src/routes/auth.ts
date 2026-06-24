@@ -182,7 +182,7 @@ auth.post("/reset-password", async (c) => {
     }
 
     const passwordHash = await bcrypt.hash(password, 12);
-    const row = result.rows[0] as { id: string };
+    const row = result.rows[0] as unknown as { id: string };
     await db.execute({
       sql: `UPDATE users SET password_hash = ?, reset_token = NULL, reset_token_expires = NULL WHERE id = ?`,
       args: [passwordHash, row.id],

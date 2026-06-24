@@ -1,39 +1,24 @@
-import Database from "better-sqlite3";
+import { createClient } from "@libsql/client";
 import dotenv from "dotenv";
-import * as fs from "fs";
-import * as path from "path";
-import { fileURLToPath } from "url";
 dotenv.config();
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const dbDir = path.resolve(__dirname, "../../data");
-if (!fs.existsSync(dbDir)) {
-  fs.mkdirSync(dbDir, { recursive: true });
-}
+const TURSO_DATABASE_URL = process.env.TURSO_DATABASE_URL || "";
+const TURSO_AUTH_TOKEN = process.env.TURSO_AUTH_TOKEN || "";
 
-const dbPath = path.join(dbDir, "lifevault.db");
-const nativeDb = new Database(dbPath);
-nativeDb.pragma("journal_mode = WAL");
+const turso = createClient({
+  url: TURSO_DATABASE_URL,
+  authToken: TURSO_AUTH_TOKEN,
+});
 
 type SqlParams = { sql: string; args?: any[] };
 
 const db = {
-  execute(params: SqlParams | string) {
+  async execute(params: SqlParams | string) {
     const sql = typeof params === "string" ? params : params.sql;
     const args = typeof params === "string" ? [] : (params.args || []);
-    const stmt = nativeDb.prepare(sql);
-    const upper = sql.trim().toUpperCase();
-    if (upper.startsWith("SELECT") || sql.includes("RETURNING")) {
-      const rows = stmt.all(...args);
-      return { rows };
-    } else {
-      stmt.run(...args);
-      return { rows: [] };
-    }
+    const result = await turso.execute({ sql, args });
+    return { rows: result.rows };
   },
-  close() {
-    nativeDb.close();
-  }
 };
 
 export default db;
