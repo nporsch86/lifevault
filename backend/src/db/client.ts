@@ -9,15 +9,7 @@ const apiUrl = TURSO_DATABASE_URL.replace("libsql://", "https://");
 type SqlParams = { sql: string; args?: any[] };
 
 interface TursoResponse {
-  results?: Array<{
-    type: string;
-    response?: {
-      result?: {
-        cols?: Array<{ name: string }>;
-        rows?: Array<Array<{ type: string; value: any }>>;
-      };
-    };
-  >;
+  results?: any[];
   error?: string;
 }
 
