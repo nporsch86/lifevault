@@ -1,9 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../store/AuthContext';
+import { useNavigate } from 'react-router-dom';
 import { Mail, Lock, User, Eye, EyeOff, LogIn, UserPlus, Loader2 } from 'lucide-react';
 
 export default function AuthPage() {
-  const { login, signup } = useAuth();
+  const { login, signup, isAuthenticated } = useAuth();
+  const navigate = useNavigate();
   const [mode, setMode] = useState<'login' | 'register'>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -11,6 +13,11 @@ export default function AuthPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  // Redirect to app when authenticated
+  useEffect(() => {
+    if (isAuthenticated) navigate('/app', { replace: true });
+  }, [isAuthenticated, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
