@@ -16,9 +16,8 @@
   "type": "module",
   "dependencies": {
     "@hono/node-server": "^2.0.4",
-    "@libsql/client": "^0.17.3",
+    "@libsql/client-wasm": "^0.14.0",
     "bcryptjs": "^3.0.3",
-    "better-sqlite3": "^12.10.0",
     "dotenv": "^17.4.2",
     "hono": "^4.12.25",
     "jose": "^6.2.3",
