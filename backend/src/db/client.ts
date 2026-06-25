@@ -94,7 +94,12 @@ const db = {
     const rows: Record<string, any>[] = [];
     const results = data.results || [];
     for (const result of results) {
-      if (result.type === "execute" && result.response?.result) {
+      // Turso v2/pipeline returns type "ok" for success, "error" for failures
+      if (result.type === "error") {
+        const msg = result.error?.message || JSON.stringify(result.error);
+        throw new Error(`Turso query error: ${msg}`);
+      }
+      if (result.type === "ok" && result.response?.type === "execute" && result.response?.result) {
         const cols = result.response.result.cols || [];
         const rowData = result.response.result.rows || [];
         for (const r of rowData) {
