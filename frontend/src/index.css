@@ -12,3 +12,12 @@ html, body, #root {
   overflow: hidden;
   touch-action: none;
 }
+
+/* Hide scrollbar in navbar nav (webkit + firefox) */
+.scrollbar-none {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}

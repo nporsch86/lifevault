@@ -28,26 +28,26 @@ const menuItems = [
 
 const Navbar = () => {
   return (
-    <header className="h-14 bg-[#16191e] border-b border-slate-800 flex items-center justify-between px-6 sticky top-0 z-50">
-      <div className="flex items-center space-x-8 h-full">
-        <NavLink to="/app" className="flex items-center">
-          <img src="/logo-sidebar.png" alt="Lifevault" className="h-6 w-auto mr-2" />
+    <header className="h-14 bg-[#16191e] border-b border-slate-800 flex items-center justify-between px-4 md:px-6 sticky top-0 z-50">
+      <div className="flex items-center h-full min-w-0 flex-1">
+        <NavLink to="/app" className="flex items-center shrink-0 mr-4">
+          <img src="/logo-sidebar.png" alt="Lifevault" className="h-6 w-auto" />
         </NavLink>
         
-        <nav className="hidden md:flex items-center space-x-1 h-full">
+        <nav className="hidden md:flex items-center space-x-1 h-full overflow-x-auto scrollbar-none overscroll-contain">
           {menuItems.map((item) => (
             <NavLink
               key={item.path}
               to={item.path}
               className={({ isActive }) => `
-                flex items-center px-4 h-full text-[10px] font-black uppercase tracking-widest transition-all relative group
+                flex items-center px-3 h-full text-[10px] font-black uppercase tracking-widest transition-all relative group whitespace-nowrap
                 ${isActive 
-                  ? 'text-blue-500 after:absolute after:bottom-0 after:left-4 after:right-4 after:h-0.5 after:bg-blue-600 after:shadow-[0_0_8px_rgba(37,99,235,0.5)]'
+                  ? 'text-blue-500 after:absolute after:bottom-0 after:left-3 after:right-3 after:h-0.5 after:bg-blue-600 after:shadow-[0_0_8px_rgba(37,99,235,0.5)]'
                   : 'text-slate-500 hover:text-slate-200'}
               `}
             >
-              <item.icon className="w-4 h-4 mr-2 hidden lg:block" />
-              <span className="hidden sm:block">{item.label}</span>
+              <item.icon className="w-4 h-4 mr-1.5" />
+              <span>{item.label}</span>
             </NavLink>
           ))}
         </nav>
