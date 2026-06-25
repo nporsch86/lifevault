@@ -137,6 +137,7 @@ export default function DailyView() {
 
   const handleSlotClick = (e: React.PointerEvent, hour: number) => {
     if (e.pointerType === 'pen') {
+      e.preventDefault();
       setHandwritingHour(hour);
       setInlineEvent(null);
       return;

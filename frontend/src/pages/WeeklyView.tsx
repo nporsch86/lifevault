@@ -139,6 +139,7 @@ export default function WeeklyView() {
               <div 
                 onPointerDown={(e) => {
                   if (e.pointerType === 'pen') {
+                    e.preventDefault();
                     e.stopPropagation();
                     setHandwritingDate(dateInfo.full);
                   }

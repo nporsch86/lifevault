@@ -237,6 +237,7 @@ export default function MonthlyView() {
                   <div 
                     onPointerDown={(e) => {
                       if (e.pointerType === 'pen') {
+                        e.preventDefault();
                         e.stopPropagation();
                         setHandwritingDate(dateStr);
                       } else {

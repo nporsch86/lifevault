@@ -1,1 +1,14 @@
 @import "tailwindcss";
+
+/* Tablet touch stability — prevent elastic scrolling and layout drift */
+html, body, #root {
+  overscroll-behavior: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Ensure the main app area is a stable container on tablet */
+.fixed-container {
+  position: relative;
+  overflow: hidden;
+  touch-action: none;
+}

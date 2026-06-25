@@ -34,6 +34,7 @@ export default function HandwritingOverlay({ onCapture, onCancel, hour }: Handwr
   }, []);
 
   const startDrawing = (e: React.PointerEvent) => {
+    e.preventDefault();
     e.stopPropagation();
     setIsDrawing(true);
     setHasContent(true);
@@ -48,6 +49,7 @@ export default function HandwritingOverlay({ onCapture, onCancel, hour }: Handwr
 
   const draw = (e: React.PointerEvent) => {
     if (!isDrawing) return;
+    e.preventDefault();
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
@@ -57,7 +59,8 @@ export default function HandwritingOverlay({ onCapture, onCancel, hour }: Handwr
     ctx.stroke();
   };
 
-  const stopDrawing = () => {
+  const stopDrawing = (e: React.PointerEvent) => {
+    e.preventDefault();
     setIsDrawing(false);
   };
 
@@ -95,8 +98,9 @@ export default function HandwritingOverlay({ onCapture, onCancel, hour }: Handwr
 
   return (
     <div 
-      className="absolute inset-0 z-[100] bg-blue-600/5 backdrop-blur-[1px] animate-in fade-in duration-200 rounded-2xl border-2 border-blue-500/30"
+      className="absolute inset-0 z-[100] bg-blue-600/5 backdrop-blur-[1px] animate-in fade-in duration-200 rounded-2xl border-2 border-blue-500/30 touch-none select-none"
       onPointerDown={(e) => e.stopPropagation()}
+      style={{ touchAction: 'none', WebkitUserSelect: 'none' }}
     >
       <div className="absolute top-2 right-2 flex space-x-1 z-[110]">
         <button 
