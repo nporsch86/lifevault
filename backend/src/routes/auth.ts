@@ -64,9 +64,9 @@ auth.post("/signup", async (c) => {
         subscriptionTier: user.subscription_tier,
       },
     }, 201);
-  } catch (err) {
+  } catch (err: any) {
     console.error("Signup error:", err);
-    return c.json({ error: "Internal server error" }, 500);
+    return c.json({ error: `Signup error: ${err?.message || err}` }, 500);
   }
 });
 
