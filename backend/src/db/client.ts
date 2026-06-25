@@ -55,7 +55,7 @@ const db = {
         const rowData = result.response.result.rows || [];
         for (const r of rowData) {
           const row: Record<string, any> = {};
-          cols.forEach((col, i) => {
+          cols.forEach((col: any, i: number) => {
             row[col.name] = r[i]?.value ?? null;
           });
           rows.push(row);
