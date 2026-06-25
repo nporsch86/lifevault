@@ -1,10 +1,26 @@
 import dotenv from "dotenv";
 dotenv.config();
 
-const TURSO_DATABASE_URL = process.env.TURSO_DATABASE_URL || "";
-const TURSO_AUTH_TOKEN = process.env.TURSO_AUTH_TOKEN || "";
+// ---- Validate env vars at module load ----
+
+function requireEnv(name: string): string {
+  const val = process.env[name];
+  if (!val) {
+    const msg = `Missing required environment variable: ${name}`
+      + `\n  Set it in your Render dashboard (Environment → Environment Variables)`
+      + `\n  Or create a .env file with: ${name}=your-value`;
+    console.error(msg);
+    throw new Error(msg);
+  }
+  return val;
+}
+
+const TURSO_DATABASE_URL = requireEnv("TURSO_DATABASE_URL");
+const TURSO_AUTH_TOKEN = requireEnv("TURSO_AUTH_TOKEN");
 
 const apiUrl = TURSO_DATABASE_URL.replace("libsql://", "https://");
+
+// ---- Types ----
 
 type SqlParams = { sql: string; args?: any[] };
 
@@ -12,6 +28,13 @@ interface TursoResponse {
   results?: any[];
   error?: string;
 }
+
+interface TursoError {
+  message: string;
+  [key: string]: any;
+}
+
+// ---- DB Client ----
 
 const db = {
   async execute(params: SqlParams | string) {
@@ -26,27 +49,48 @@ const db = {
       },
     ];
 
-    const response = await fetch(`${apiUrl}/v2/pipeline`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${TURSO_AUTH_TOKEN}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        requests: statements.map(s => ({
-          type: "execute",
-          stmt: { sql: s.q, args: s.params },
-        })),
-      }),
-    });
-
-    const data = await response.json() as TursoResponse;
-
-    if (data.error) {
-      throw new Error(data.error);
+    let response: Response;
+    try {
+      response = await fetch(`${apiUrl}/v2/pipeline`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${TURSO_AUTH_TOKEN}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          requests: statements.map(s => ({
+            type: "execute",
+            stmt: { sql: s.q, args: s.params },
+          })),
+        }),
+      });
+    } catch (fetchErr: any) {
+      const msg = `Turso connection failed (check TURSO_DATABASE_URL): ${fetchErr.message}`;
+      console.error(msg);
+      throw new Error(msg);
     }
 
-    // Parse results
+    if (!response.ok) {
+      const body = await response.text().catch(() => "(no body)");
+      const msg = `Turso API error (HTTP ${response.status}): ${body}`;
+      console.error(msg);
+      throw new Error(msg);
+    }
+
+    let data: TursoResponse;
+    try {
+      data = await response.json() as TursoResponse;
+    } catch (parseErr: any) {
+      const msg = `Failed to parse Turso response: ${parseErr.message}`;
+      console.error(msg);
+      throw new Error(msg);
+    }
+
+    if (data.error) {
+      throw new Error(`Turso error: ${data.error}`);
+    }
+
+    // Parse results into rows
     const rows: Record<string, any>[] = [];
     const results = data.results || [];
     for (const result of results) {
