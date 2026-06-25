@@ -235,9 +235,7 @@ const migrations: string[] = [
     updated_at TEXT NOT NULL DEFAULT (datetime('now'))
   )`,
 
-  `ALTER TABLE users ADD COLUMN reset_token TEXT`,
-  `ALTER TABLE users ADD COLUMN reset_token_expires TEXT`,
-];
+  ];
 
 export async function runMigrations() {
   console.log("Running database migrations...");
@@ -260,6 +258,8 @@ export async function runMigrations() {
     `ALTER TABLE expenses ADD COLUMN original_date TEXT`,
     `ALTER TABLE calendars ADD COLUMN google_calendar_id TEXT`,
     `ALTER TABLE expenses ADD COLUMN receipt_url TEXT`,
+    `ALTER TABLE users ADD COLUMN reset_token TEXT`,
+    `ALTER TABLE users ADD COLUMN reset_token_expires TEXT`,
   ];
 
   for (const sql of alterStatements) {
