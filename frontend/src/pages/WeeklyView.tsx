@@ -4,12 +4,13 @@ import { useState } from 'react';
 import { usePlanner } from '../store/PlannerContext';
 import type { PlannerEvent } from '../store/PlannerContext';
 import AddEventModal from '../components/AddEventModal';
+import HandwritingOverlay from '../components/HandwritingOverlay';
 
 const DAYS = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
 
 export default function WeeklyView() {
   const navigate = useNavigate();
-  const { events, tasks, togglePaid, expenses, allDayEvents } = usePlanner();
+  const { events, tasks, togglePaid, expenses, allDayEvents, addAllDayEvent } = usePlanner();
 
   const getCategoryColorClass = (catName: string) => {
     const standard: Record<string, string> = {
@@ -30,6 +31,7 @@ export default function WeeklyView() {
   const todayDateStr = '2025-10-29';
   const [isEventModalOpen, setIsEventModalOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState(todayDateStr);
+  const [handwritingDate, setHandwritingDate] = useState<string | null>(null);
 
   const weekDates = [
     { label: '27', full: '2025-10-27' },
@@ -135,12 +137,37 @@ export default function WeeklyView() {
               
               {/* Day Content */}
               <div 
+                onPointerDown={(e) => {
+                  if (e.pointerType === 'pen') {
+                    e.stopPropagation();
+                    setHandwritingDate(dateInfo.full);
+                  }
+                }}
                 className={`flex-1 rounded-[2rem] p-3 border transition-all flex flex-col space-y-3 relative group
                   ${isToday 
                     ? 'bg-blue-600/[0.03] border-blue-600/20 hover:border-blue-600/40' 
                     : 'bg-slate-800/20 border-slate-800/50 hover:border-slate-700'
                   }`}
                   >
+                  {/* Handwriting Overlay */}
+                  {handwritingDate === dateInfo.full && (
+                    <div className="absolute inset-0 z-50">
+                      <HandwritingOverlay 
+                        onCancel={() => setHandwritingDate(null)}
+                        onCapture={(text, dataUrl) => {
+                          addAllDayEvent({
+                            id: Math.random().toString(36).substr(2, 9),
+                            title: text,
+                            date: dateInfo.full,
+                            category: 'Personal',
+                            isHandwritten: true,
+                            handwrittenData: dataUrl,
+                          });
+                          setHandwritingDate(null);
+                        }}
+                      />
+                    </div>
+                  )}
                   {/* All-Day Notes Bar */}
                   {dayAllDay.length > 0 && (
                   <div className="flex flex-col gap-1.5 mb-2 pb-2 border-b border-slate-800/50">

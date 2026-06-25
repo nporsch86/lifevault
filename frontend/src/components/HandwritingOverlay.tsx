@@ -19,14 +19,16 @@ export default function HandwritingOverlay({ onCapture, onCancel, hour }: Handwr
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    // Set canvas size
+    // High-DPI canvas — crisp on tablet/stylus
     const rect = canvas.getBoundingClientRect();
-    canvas.width = rect.width;
-    canvas.height = rect.height;
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = rect.width * dpr;
+    canvas.height = rect.height * dpr;
+    ctx.scale(dpr, dpr);
 
     // Set drawing styles
     ctx.strokeStyle = '#3b82f6'; // blue-500
-    ctx.lineWidth = 3;
+    ctx.lineWidth = Math.max(3, 4 / dpr); // physical ~4px wide minimum
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
   }, []);
@@ -64,7 +66,14 @@ export default function HandwritingOverlay({ onCapture, onCancel, hour }: Handwr
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    // Reset canvas (also resets the transform)
+    canvas.width = canvas.width;
+    const dpr = window.devicePixelRatio || 1;
+    ctx.scale(dpr, dpr);
+    ctx.strokeStyle = '#3b82f6';
+    ctx.lineWidth = Math.max(3, 4 / dpr);
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
     setHasContent(false);
   };
 
@@ -75,13 +84,13 @@ export default function HandwritingOverlay({ onCapture, onCancel, hour }: Handwr
     const canvas = canvasRef.current;
     const dataUrl = canvas?.toDataURL('image/png');
 
-    // Mock OCR process
+    // Use the handwriting image directly — no OCR available yet
+    // Title will show the handwritten note rendered from the image
     setTimeout(() => {
-      // In a real app, we would send the canvas image to an OCR API
-      // Here we'll just mock a successful recognition
-      onCapture("New Handwritten Event", dataUrl);
+      // Use a generic title — the handwritten image renders inline
+      onCapture("📝 Handwritten Note", dataUrl);
       setIsProcessing(false);
-    }, 1000);
+    }, 500);
   };
 
   return (
