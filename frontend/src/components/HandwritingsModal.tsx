@@ -1,5 +1,6 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { Sparkles, X, Check, Eraser } from 'lucide-react';
+import { Sparkles, X, Check, Eraser, Loader2 } from 'lucide-react';
+import { createWorker } from 'tesseract.js';
 
 interface HandwritingsModalProps {
   onCapture: (text: string, dataUrl?: string) => void;
@@ -12,6 +13,32 @@ export default function HandwritingsModal({ onCapture, onCancel, dateStr }: Hand
   const [isDrawing, setIsDrawing] = useState(false);
   const [hasContent, setHasContent] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [recognizedText, setRecognizedText] = useState('');
+  const [ocrReady, setOcrReady] = useState(false);
+  const [ocrLoading, setOcrLoading] = useState(true);
+
+  // Initialize Tesseract worker on mount
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const worker = await createWorker('eng');
+        if (cancelled) { await worker.terminate(); return; }
+        // Store worker on the ref so handleFinish can use it
+        (window as any).__ocrWorker = worker;
+        setOcrReady(true);
+        setOcrLoading(false);
+      } catch (err) {
+        console.error('OCR init error:', err);
+        setOcrLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+      const w = (window as any).__ocrWorker;
+      if (w) { w.terminate(); (window as any).__ocrWorker = null; }
+    };
+  }, []);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -19,7 +46,6 @@ export default function HandwritingsModal({ onCapture, onCancel, dateStr }: Hand
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    // High-DPI canvas
     const rect = canvas.getBoundingClientRect();
     const dpr = window.devicePixelRatio || 1;
     canvas.width = rect.width * dpr;
@@ -45,6 +71,7 @@ export default function HandwritingsModal({ onCapture, onCancel, dateStr }: Hand
     if (!ctx) return;
     setIsDrawing(true);
     setHasContent(true);
+    setRecognizedText('');
     const pos = getPos(canvas, e);
     ctx.beginPath();
     ctx.moveTo(pos.x, pos.y);
@@ -83,17 +110,36 @@ export default function HandwritingsModal({ onCapture, onCancel, dateStr }: Hand
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
     setHasContent(false);
+    setRecognizedText('');
   };
 
-  const handleFinish = () => {
+  const handleFinish = async () => {
     if (!hasContent) return;
     setIsProcessing(true);
     const canvas = canvasRef.current;
     const dataUrl = canvas?.toDataURL('image/png');
-    setTimeout(() => {
+
+    try {
+      const worker = (window as any).__ocrWorker;
+      if (!worker) {
+        // Fallback: use title without OCR
+        onCapture("📝 Handwritten Note", dataUrl);
+        setIsProcessing(false);
+        return;
+      }
+      const { data } = await worker.recognize(dataUrl);
+      const text = data.text?.trim() || '';
+      if (text) {
+        setRecognizedText(text);
+        onCapture(text, dataUrl);
+      } else {
+        onCapture("📝 Handwritten Note", dataUrl);
+      }
+    } catch (err) {
+      console.error('OCR error:', err);
       onCapture("📝 Handwritten Note", dataUrl);
-      setIsProcessing(false);
-    }, 300);
+    }
+    setIsProcessing(false);
   };
 
   return (
@@ -112,6 +158,12 @@ export default function HandwritingsModal({ onCapture, onCancel, dateStr }: Hand
             </h3>
           </div>
           <div className="flex items-center space-x-2">
+            {ocrLoading && !ocrReady && (
+              <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest flex items-center mr-2">
+                <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                Loading OCR...
+              </span>
+            )}
             <button
               onClick={clearCanvas}
               className="p-2 bg-slate-800 text-slate-400 hover:text-white rounded-xl transition-colors border border-slate-700"
@@ -142,6 +194,14 @@ export default function HandwritingsModal({ onCapture, onCancel, dateStr }: Hand
           />
         </div>
 
+        {/* Recognized Text Preview */}
+        {recognizedText && (
+          <div className="px-5 py-3 bg-blue-600/10 border-t border-blue-600/20">
+            <p className="text-[10px] font-black text-blue-500 uppercase tracking-widest mb-1">Recognized:</p>
+            <p className="text-sm font-bold text-slate-100">{recognizedText}</p>
+          </div>
+        )}
+
         {/* Footer */}
         <div className="flex items-center justify-between p-5 border-t border-slate-800">
           <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center">
@@ -159,8 +219,8 @@ export default function HandwritingsModal({ onCapture, onCancel, dateStr }: Hand
           >
             {isProcessing ? (
               <>
-                <Sparkles className="w-4 h-4 mr-2 animate-spin" />
-                Converting...
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Recognizing...
               </>
             ) : (
               <>
