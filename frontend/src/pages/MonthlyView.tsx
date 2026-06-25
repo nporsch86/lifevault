@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { usePlanner } from '../store/PlannerContext';
 import type { PlannerEvent } from '../store/PlannerContext';
 import AddEventModal from '../components/AddEventModal';
-import HandwritingOverlay from '../components/HandwritingOverlay';
+import HandwritingsModal from '../components/HandwritingsModal';
 
 const DAYS_SHORT = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
@@ -45,7 +45,8 @@ export default function MonthlyView() {
   };
   const [currentMonth] = useState('October 2025');
   const [isEventModalOpen, setIsEventModalOpen] = useState(false);
-  const [handwritingDate, setHandwritingDate] = useState<string | null>(null);
+  const [showHandwritingModal, setShowHandwritingModal] = useState(false);
+  const [handwritingTargetDate, setHandwritingTargetDate] = useState('');
   const selectedDate = '2025-10-29';
   
   const daysInMonth = 31;
@@ -239,7 +240,8 @@ export default function MonthlyView() {
                       if (e.pointerType === 'pen') {
                         e.preventDefault();
                         e.stopPropagation();
-                        setHandwritingDate(dateStr);
+                        setHandwritingTargetDate(dateStr);
+                        setShowHandwritingModal(true);
                       } else {
                         isCurrentMonth && navigate('/');
                       }
@@ -250,22 +252,6 @@ export default function MonthlyView() {
                       ${hasHighPriority ? 'border-l-2 border-l-rose-500/50' : ''}
                     `}
                   >
-                    {handwritingDate === dateStr && (
-                      <HandwritingOverlay 
-                        onCancel={() => setHandwritingDate(null)}
-                        onCapture={(text, dataUrl) => {
-                          addAllDayEvent({
-                            id: Math.random().toString(36).substr(2, 9),
-                            title: text,
-                            date: dateStr,
-                            category: 'Personal',
-                            isHandwritten: true,
-                            handwrittenData: dataUrl,
-                          });
-                          setHandwritingDate(null);
-                        }}
-                      />
-                    )}
                     <div className="flex justify-between items-start mb-2">
                        <div className="flex flex-col">
                           <span className={`text-lg font-black transition-colors ${isToday ? 'text-blue-500 font-black' : 'text-slate-600 group-hover:text-slate-300'}`}>
@@ -385,6 +371,25 @@ export default function MonthlyView() {
         onClose={() => setIsEventModalOpen(false)} 
         initialDate={selectedDate}
       />
+
+      {/* Handwriting Modal */}
+      {showHandwritingModal && (
+        <HandwritingsModal
+          dateStr={handwritingTargetDate}
+          onCancel={() => setShowHandwritingModal(false)}
+          onCapture={(text, dataUrl) => {
+            addAllDayEvent({
+              id: Math.random().toString(36).substr(2, 9),
+              title: text,
+              date: handwritingTargetDate,
+              category: 'Personal',
+              isHandwritten: true,
+              handwrittenData: dataUrl,
+            });
+            setShowHandwritingModal(false);
+          }}
+        />
+      )}
     </div>
   );
 }

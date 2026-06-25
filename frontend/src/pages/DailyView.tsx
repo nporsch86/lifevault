@@ -5,6 +5,7 @@ import type { PlannerTask, PlannerEvent } from '../store/PlannerContext';
 import AddEventModal from '../components/AddEventModal';
 import VoiceInput from '../components/VoiceInput';
 import HandwritingOverlay from '../components/HandwritingOverlay';
+import HandwritingsModal from '../components/HandwritingsModal';
 import { parseVoiceCommand } from '../utils/voiceParser';
 
 const HOURS = Array.from({ length: 24 }, (_, i) => {
@@ -98,6 +99,8 @@ export default function DailyView() {
   const [newInvitee, setNewInvitee] = useState('');
   const [inlineEvent, setInlineEvent] = useState<{ hour: number; title: string } | null>(null);
   const [handwritingHour, setHandwritingHour] = useState<number | null>(null);
+  const [showHandwritingModal, setShowHandwritingModal] = useState(false);
+  const [handwritingTargetHour, setHandwritingTargetHour] = useState<number>(9);
 
   const todayTasks = tasks.filter(t => t.date === todayDateStr);
   const rolledOverTasks = tasks.filter(t => t.date < todayDateStr && !t.completed);
@@ -138,8 +141,8 @@ export default function DailyView() {
   const handleSlotClick = (e: React.PointerEvent, hour: number) => {
     if (e.pointerType === 'pen') {
       e.preventDefault();
-      setHandwritingHour(hour);
-      setInlineEvent(null);
+      setHandwritingTargetHour(hour);
+      setShowHandwritingModal(true);
       return;
     }
 
@@ -753,6 +756,26 @@ export default function DailyView() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Handwriting Modal */}
+      {showHandwritingModal && (
+        <HandwritingsModal
+          dateStr={todayDateStr}
+          onCancel={() => setShowHandwritingModal(false)}
+          onCapture={(text, dataUrl) => {
+            addEvent({
+              id: Math.random().toString(36).substr(2, 9),
+              title: text,
+              date: todayDateStr,
+              startTime: `${handwritingTargetHour.toString().padStart(2, '0')}:00`,
+              category: 'Personal',
+              isHandwritten: true,
+              handwrittenData: dataUrl,
+            });
+            setShowHandwritingModal(false);
+          }}
+        />
       )}
     </div>
   );

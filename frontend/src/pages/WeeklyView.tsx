@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { usePlanner } from '../store/PlannerContext';
 import type { PlannerEvent } from '../store/PlannerContext';
 import AddEventModal from '../components/AddEventModal';
-import HandwritingOverlay from '../components/HandwritingOverlay';
+import HandwritingsModal from '../components/HandwritingsModal';
 
 const DAYS = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
 
@@ -31,7 +31,8 @@ export default function WeeklyView() {
   const todayDateStr = '2025-10-29';
   const [isEventModalOpen, setIsEventModalOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState(todayDateStr);
-  const [handwritingDate, setHandwritingDate] = useState<string | null>(null);
+  const [showHandwritingModal, setShowHandwritingModal] = useState(false);
+  const [handwritingTargetDate, setHandwritingTargetDate] = useState(todayDateStr);
 
   const weekDates = [
     { label: '27', full: '2025-10-27' },
@@ -141,7 +142,8 @@ export default function WeeklyView() {
                   if (e.pointerType === 'pen') {
                     e.preventDefault();
                     e.stopPropagation();
-                    setHandwritingDate(dateInfo.full);
+                    setHandwritingTargetDate(dateInfo.full);
+                    setShowHandwritingModal(true);
                   }
                 }}
                 className={`flex-1 rounded-[2rem] p-3 border transition-all flex flex-col space-y-3 relative group
@@ -150,25 +152,6 @@ export default function WeeklyView() {
                     : 'bg-slate-800/20 border-slate-800/50 hover:border-slate-700'
                   }`}
                   >
-                  {/* Handwriting Overlay */}
-                  {handwritingDate === dateInfo.full && (
-                    <div className="absolute inset-0 z-50">
-                      <HandwritingOverlay 
-                        onCancel={() => setHandwritingDate(null)}
-                        onCapture={(text, dataUrl) => {
-                          addAllDayEvent({
-                            id: Math.random().toString(36).substr(2, 9),
-                            title: text,
-                            date: dateInfo.full,
-                            category: 'Personal',
-                            isHandwritten: true,
-                            handwrittenData: dataUrl,
-                          });
-                          setHandwritingDate(null);
-                        }}
-                      />
-                    </div>
-                  )}
                   {/* All-Day Notes Bar */}
                   {dayAllDay.length > 0 && (
                   <div className="flex flex-col gap-1.5 mb-2 pb-2 border-b border-slate-800/50">
@@ -314,6 +297,25 @@ export default function WeeklyView() {
         onClose={() => setIsEventModalOpen(false)} 
         initialDate={selectedDate}
       />
+
+      {/* Handwriting Modal */}
+      {showHandwritingModal && (
+        <HandwritingsModal
+          dateStr={handwritingTargetDate}
+          onCancel={() => setShowHandwritingModal(false)}
+          onCapture={(text, dataUrl) => {
+            addAllDayEvent({
+              id: Math.random().toString(36).substr(2, 9),
+              title: text,
+              date: handwritingTargetDate,
+              category: 'Personal',
+              isHandwritten: true,
+              handwrittenData: dataUrl,
+            });
+            setShowHandwritingModal(false);
+          }}
+        />
+      )}
     </div>
   );
 }
